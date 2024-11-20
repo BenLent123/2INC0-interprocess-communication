@@ -32,11 +32,7 @@ int main (int argc, char * argv[])
     mqd_t channel   = mq_open(argv[1], O_WRONLY);
     Rsp_queue_X rsp;
     S1_queue_X req;
-
-    struct mq_attr attr;
-    attr.mq_maxmsg = 4;
-    attr.mq_msgsize = sizeof(S1_queue_X);
-    char channelname[10] = "S1_queue";
+    
     int data = mq_recieve(channel, (char*)&req, sizeof(S1_queue_X),0);
     if(result == -1){
         perror("recieveing failed");
