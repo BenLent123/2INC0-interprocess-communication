@@ -19,4 +19,25 @@
 
 // define the data structures for your messages here
 
+typedef struct {
+    int request_id;
+    int service_id;
+    int data;
+}req_queue_x;
+
+typedef struct {
+    int request_id;
+    int data;
+}S1_queue_X;
+
+typedef struct{
+    int request_id;
+    int data;
+}S2_queue_X;
+
+typedef struct{
+    int request_id;
+    int result;
+}Rsp_queue_X;
+
 #endif
