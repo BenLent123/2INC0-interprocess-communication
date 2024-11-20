@@ -29,16 +29,17 @@ static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {
-    mqd_t channel   = mq_open(argv[1], O_WRONLY);
+    // im not sure mqd_t channel   = mq_open(argv[1], O_WRONLY);
     Rsp_queue_X rsp;
     S1_queue_X req;
     
-    int data = mq_recieve(channel, (char*)&req, sizeof(S1_queue_X),0);
+    int result = mq_recieve(channel, (char*)&req, sizeof(S1_queue_X),0);
     if(result == -1){
         perror("recieveing failed");
     }
     rsleep(100);
     rsp.result = service(req.data);
+    rsp.request_id = req.request_id;
     mq_send(channel, (char*)&rsp, sizeof(Rsp_queue_X))
     mq_close(channel);
     // TODO:
