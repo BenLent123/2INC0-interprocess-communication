@@ -29,7 +29,8 @@ static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {
-    // im not sure mqd_t channel   = mq_open(argv[1], O_WRONLY);
+    // im not sure abt --> mqd_t channel   = mq_open(argv[1], O_WRONLY);
+    
     Rsp_queue_X rsp;
     S1_queue_X req;
     
