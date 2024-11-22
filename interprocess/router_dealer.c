@@ -34,10 +34,20 @@ char dealer2worker1_name[30];
 char dealer2worker2_name[30];
 char worker2dealer_name[30];
 
+//Creates request holding variables
+//Request nextRequest;
+
+//Creates buffer to forward data
+  req_queue_x buffer_c2d[10];
+
 //Threading functions
-void forward_thread(Rsp_queue_x rsp){
+void c2d_thread(struct mq_attr * attr){
+  //Creates queue according to fed parameters to read client data
+  mqd_t mq_c2d = mq_open (client2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr);
+  
   while(true){
-  int result = mq_recieve(channel, (char*) &rsp, sizeof(Rsp_queue_x),0);
+	  //Blocking read of client queue, data is stored in c2d buffer
+	  mq_receive (mg_c2d, buffer_c2d, sizeof(req_queue_x), NULL);
   }
 }
 
@@ -48,23 +58,26 @@ int main (int argc, char * argv[])
     fprintf (stderr, "%s: invalid arguments\n", argv[0]);
   }
   
-  //Create queues
-  struct mq_attr attr_req;
-  struct mq_attr attr_rsp;
-  struct mq_attr attr_ser;
+  //Set queue parameters
+  struct mq_attr attr_c2d; //client to dealer ... and so on. c = client, d = dealer, w = worker
+  struct mq_attr attr_d2w;
+  struct mq_attr attr_w2d;
+  struct mq_attr attr_d2c; 
 
-  
+  attr_c2d.mq_maxmsg  = 10;
+  attr_c2d.mq_msgsize = sizeof (req_queue_x);
+
 
   //Defines message data structure variables
   req_queue_x req;
-  Rsp_queue_x rsp;
-  S1_queue_x ser1;
+  Rsp_queue_X rsp;
+  S1_queue_X ser1;
 
-  //Defines 2 threads, one for passing requests from client to workers, one for passing results from workers to client
+  //Creates 4 threads, one for each data flow path (c2d, d2w, w2d, d2c) so that all 4 queues can excecute simultaneously
+  //Each threading function uses mutexes to prevent race conditions
   pthread_t fthread; //"forward" thread client2worker
   pthread_t bthread; //"backward" thread worker2 client
-  pthread_create(&fthread, NULL, forward_thread(), req)
-  pthread_create(&bthread, NULL, backward_thread(), req)
+  pthread_create(&fthread, NULL, c2d_thread(), attr_c2d)
   
   
   
