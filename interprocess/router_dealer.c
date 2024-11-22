@@ -34,12 +34,39 @@ char dealer2worker1_name[30];
 char dealer2worker2_name[30];
 char worker2dealer_name[30];
 
+//Threading functions
+void forward_thread(Rsp_queue_x rsp){
+  while(true){
+  int result = mq_recieve(channel, (char*) &rsp, sizeof(Rsp_queue_x),0);
+  }
+}
+
 int main (int argc, char * argv[])
 {
   if (argc != 1)
   {
     fprintf (stderr, "%s: invalid arguments\n", argv[0]);
   }
+  
+  //Create queues
+  struct mq_attr attr_req;
+  struct mq_attr attr_rsp;
+  struct mq_attr attr_ser;
+
+  
+
+  //Defines message data structure variables
+  req_queue_x req;
+  Rsp_queue_x rsp;
+  S1_queue_x ser1;
+
+  //Defines 2 threads, one for passing requests from client to workers, one for passing results from workers to client
+  pthread_t fthread; //"forward" thread client2worker
+  pthread_t bthread; //"backward" thread worker2 client
+  pthread_create(&fthread, NULL, forward_thread(), req)
+  pthread_create(&bthread, NULL, backward_thread(), req)
+  
+  
   
   // TODO:
     //  * create the message queues (see message_queue_test() in
