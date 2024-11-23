@@ -37,8 +37,10 @@ char worker2dealer_name[30];
 //Creates request holding variables
 //Request nextRequest;
 
-//Creates buffer to forward data
-  req_queue_x buffer_c2d[10];
+//Creates circular buffers for data transfers
+  req_queue_x buffer_c2d[10]; int in_c2d = 0; int out_c2d = 0; int count = 0; int size_req = sizeof(req_queue_x);
+  S1_queue_X buffer_d2w[10];
+  Rsp_queue_X buffer_w2d[10];
 
 //Threading functions
 void c2d_thread(struct mq_attr * attr){
@@ -47,7 +49,17 @@ void c2d_thread(struct mq_attr * attr){
   
   while(true){
 	  //Blocking read of client queue, data is stored in c2d buffer
-	  mq_receive (mg_c2d, buffer_c2d, sizeof(req_queue_x), NULL);
+	  //If statement is used to make sure that the buffer is not overloaded
+	  if(count<10) { //critical section of thread
+		  pthread_mutex_lock(&m_c2d);
+		  mq_receive (mg_c2d, buffer_c2d[in_c2d], size_req, NULL);
+	  //Increments array variables
+		  in_c2d = (in_c2d+1)%10;
+	      ++count;
+	      pthread_mutex_unlock(&m_c2d);
+	      } 
+	  else sleep(0.00001);
+	  //If the buffer is overloaded, the thread sleeps for 10 microseconds to allow the buffer to unload
   }
 }
 
@@ -68,16 +80,17 @@ int main (int argc, char * argv[])
   attr_c2d.mq_msgsize = sizeof (req_queue_x);
 
 
-  //Defines message data structure variables
-  req_queue_x req;
-  Rsp_queue_X rsp;
-  S1_queue_X ser1;
+  //Creates mutexes for each buffer
+  pthread_mutex_t m_c2d = PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t m_c2w = PTHREAD_MUTEX_INITIALIZER;
+  pthread_mutex_t m_w2d = PTHREAD_MUTEX_INITIALIZER;
+
 
   //Creates 4 threads, one for each data flow path (c2d, d2w, w2d, d2c) so that all 4 queues can excecute simultaneously
   //Each threading function uses mutexes to prevent race conditions
-  pthread_t fthread; //"forward" thread client2worker
+  pthread_t c2dthread; //"forward" thread client2worker
   pthread_t bthread; //"backward" thread worker2 client
-  pthread_create(&fthread, NULL, c2d_thread(), attr_c2d)
+  pthread_create(&c2dthread, NULL, c2d_thread(), attr_c2d)
   
   
   
