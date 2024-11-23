@@ -175,17 +175,19 @@ int main (int argc, char * argv[])
   if(pthread_cancel(c2dthread)==0){printf("C2D thread terminated");};
   else {perror("c2d thread not terminated");}
  
-  if(mq_unlink(dealer2worker1_name) == 0) {printf("Client terminated and C2D queue marked for deletion");}
-  else {perror("c2d queue not unlinked");}
-  if(mq_close(dealer2worker1_name)==0){printf("C2D queue closed by parent thread");};
-  else {perror("c2d queue not closed");}
-  if(pthread_cancel(d2wthread)==0){printf("C2D thread terminated");};
-  else {perror("c2d thread not terminated");}
+  if(mq_unlink(dealer2worker1_name) == 0) {printf("D2W queue marked for deletion");}
+  else {perror("D2W queue not unlinked");}
+  if(mq_close(dealer2worker1_name)==0){printf("D2W queue closed by parent thread");};
+  else {perror("D2W queue not closed");}
+  if(pthread_cancel(d2wthread)==0){printf("D2W thread terminated");};
+  else {perror("D2W thread not terminated");}
   
-  if(mq_unlink(dealer2worker1_name) == 0) {printf("S1 queue marked for deletion");}
-  else {perror("S1 queue not unlinked");}
-  mq_close(dealer2worker1_name);
-  pthread_cancel(d2wthread);
+  if(mq_unlink(worker2dealer_name) == 0) {printf("D2W queue marked for deletion");}
+  else {perror("D2W queue not unlinked");}
+  if(mq_close(worker2dealer_name)==0){printf("C2D queue closed by parent thread");};
+  else {perror("D2W queue not closed");}
+  if(pthread_cancel(w2dthread)==0){printf("D2W thread terminated");};
+  else {perror("D2W thread not terminated");}
   
   // TODO:
     //  * create the message queues (see message_queue_test() in
