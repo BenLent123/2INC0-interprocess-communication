@@ -27,25 +27,50 @@
 
 static void rsleep (int t);
 
-char* name = "NO_NAME_DEFINED";
-mqd_t dealer2worker;
-mqd_t worker2dealer;
+//char* name = "NO_NAME_DEFINED";
+//mqd_t dealer2worker;
+// mqd_t worker2dealer;
 
 
 int main (int argc, char * argv[])
-{
-    // TODO:
-    // (see message_queue_test() in interprocess_basic.c)
-    //  * open the two message queues (whose names are provided in the
-    //    arguments)
-    //  * repeatedly:
-    //      - read from the S2 message queue the new job to do
-    //      - wait a random amount of time (e.g. rsleep(10000);)
-    //      - do the job 
-    //      - write the results to the Rsp message queue
-    //    until there are no more tasks to do
-    //  * close the message queues
+{    
+     int pid_worker2 = getpid();
+    if (argc< 3){
+        fprintf(stderr,"usage: %s req rsp \n",argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    
+    Rsp_queue_T21 rsp;
+    S2_queue_T21 req;
+    mqd_t req_channel   = mq_open(argv[1], O_RDONLY);
+    if(req_channel == (mqd_t)-1){
+        perror("worker 2 - request channel opening failed");
+        exit(EXIT_FAILURE);
+    }
+    mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY);
+    if(rsp_channel == (mqd_t)-1){
+        perror("worker 2 - response channel opening failed");
+        exit(EXIT_FAILURE);
+    }
+    int result = mq_receive(req_channel, (char*)&req, sizeof(S2_queue_T21),0);
+    if(result == -1){
+        perror("worker 2 - recieveing failed");
+        exit(EXIT_FAILURE);
+    }
+    rsleep(100);
+    rsp.result = service(req.data);
+    rsp.request_id = req.request_id;
 
+    if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
+        perror("worker 2 - sending failed");
+        mq_close(rsp_channel);
+        mq_close(req_channel);
+        exit(EXIT_FAILURE);
+    }
+    
+    mq_close(rsp_channel);
+    mq_close(req_channel);   
+    
     return(0);
 }
 
