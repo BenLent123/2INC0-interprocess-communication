@@ -199,7 +199,7 @@ int main (int argc, char * argv[])
 	(pthread_create(&w2dthread, NULL, w2d_thread(), attr_w2d)  == 0) 
 	){
 	  printf("Threads created successfully");}
-   else {printf("Threads created successfully"); exit(1);}
+   else {printf("Threads not created successfully"); exit(1);}
   
   //The following are children process to run the client and worker
   
@@ -212,9 +212,9 @@ int main (int argc, char * argv[])
 
   //run the children processes. NOTE: FILL OUT FILES TO RUN
   if (clientID == 0)
-	{execlp ("./client", "client",client2dealer_name , &m, NULL); perror ("Client execlp() failed");}
+	{execlp ("./client", "client",client2dealer_name , &m, NULL); perror ("Client execlp() failed"); exit (1);}
   if (workerID == 0)
-	{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed");}
+	{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
         
   // wait for the client to terminate
   waitpid (clientID, NULL, 0);   
@@ -252,6 +252,7 @@ int main (int argc, char * argv[])
   if(pthread_cancel(fthread)==0){printf("forwarding thread terminated");};
   else {perror("forwarding thread not terminated");}
   
+  pthread_mutex_destroy(&m);
   // TODO:
     //  * create the message queues (see message_queue_test() in
     //    interprocess_basic.c)
