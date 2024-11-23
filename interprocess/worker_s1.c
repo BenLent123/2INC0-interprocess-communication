@@ -29,21 +29,33 @@ static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {
-    // im not sure abt --> mqd_t channel   = mq_open(argv[1], O_WRONLY);
-    
     Rsp_queue_X rsp;
     S1_queue_X req;
+    mqd_t channel   = mq_open(argv[1], O_WRONLY);
+    if(channel = (mqd_t)-1){
+        perror("worker 1 - channel opening failed");
+    }
     
     int result = mq_recieve(channel, (char*)&req, sizeof(S1_queue_X),0);
     if(result == -1){
-        perror("recieveing failed");
+        perror("worker 1 - recieveing failed");
     }
     rsleep(100);
     rsp.result = service(req.data);
     rsp.request_id = req.request_id;
-    mq_send(channel, (char*)&rsp, sizeof(Rsp_queue_X))
+
+    if(mq_send(channel, (char*)&rsp, sizeof(Rsp_queue_X)) == -1){
+        perror("worker 1 - sending failed");
+        mq_close(channel);
+    }
+    
     mq_close(channel);
-    // TODO:
+    
+    return(0);
+}
+
+
+// TODO:
     // (see message_queue_test() in interprocess_basic.c)
     //  * open the two message queues (whose names are provided in the
     //    arguments)
@@ -54,9 +66,6 @@ int main (int argc, char * argv[])
     //      - write the results to the Rsp message queue
     //    until there are no more tasks to do
     //  * close the message queues
-
-    return(0);
-}
 
 /*
  * rsleep(int t)
