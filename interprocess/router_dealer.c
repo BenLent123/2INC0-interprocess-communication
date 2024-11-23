@@ -40,6 +40,7 @@ pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 //Creates circular buffers for data transfers
   req_queue_T21 buffer_c2d[10]; int in_c2d = 0; int out_c2d = 0; int count1 = 0; int size_req = sizeof(req_queue_T21);
   S1_queue_T21 buffer_d2w[10]; int in_d2w = 0; int out_d2w = 0; int count2 = 0; int size_s1 = sizeof(S1_queue_T21);
+  S2_queue_T21 buffer_d2w[10]; int in_d2w2 = 0; int out_d2w2 = 0; int count22 = 0; int size_s12 = sizeof(S2_queue_T21);
   Rsp_queue_T21 buffer_w2d[10]; int in_w2d = 0; int out_w2d = 0; int count3 = 0; int size_rsp = sizeof(Rsp_queue_T21);
 
 //Threading functions
@@ -64,10 +65,12 @@ void c2d_thread(mqd_t mq_c2d){
 void forwarding_thread(){
 	//This thread processes client data into the format needed by workers
 	S1_queue_T21 rsp;
+	S2_queue_T21 rsp2;
   while(true){
 	  if(count1>0) { //critical section of thread
 		  pthread_mutex_lock(&m);
-		  //Extract data from buffer_c2d then put it in d2w and update buffer variables
+		  //Extract data from buffer_c2d then put it in d2w or d2w2 buffers and update buffer variables
+		  if(buffer_c2d[out].service_id == 1){
 		  rsp.request_id = buffer_c2d[out].request_id;
 		  rsp.data = buffer_c2d[out].data;
 		  
@@ -77,7 +80,19 @@ void forwarding_thread(){
 	      buffer_d2w[in] = rsp;
 	      
 	      in_d2w = (in_d2w+1)%10;
-	      ++count2;
+	      ++count2;}
+	      //buffer for S2
+	      else if (buffer_c2d[out].service_id == 2){
+		  rsp2.request_id = buffer_c2d[out].request_id;
+		  rsp2.data = buffer_c2d[out].data;
+		  
+		  out_c2d = (out_c2d+1)%10;
+	      --count1;
+	      
+	      buffer_d2w2[in] = rsp2;
+	      
+	      in_d2w2 = (in_d2w2+1)%10;
+	      ++count22;}
 	      
 	      pthread_mutex_unlock(&m);
 	      } 
@@ -97,6 +112,24 @@ void d2w_thread(mqd_t mq_d2w){
 	  //Increments array variables
 		  out_d2w = (out_d2w+1)%10;
 	      --count2;
+	      pthread_mutex_unlock(&m);
+	      } 
+	  else sleep(0.00001);
+	  //If the buffer is empty, the thread sleeps for 10 microseconds to allow the buffer to fill
+  }
+}
+
+void d2w2_thread(mqd_t mq_d2w2){
+  
+  while(true){
+	  //Transfer data from client buffer to worker queue
+	  //If statement is used to make sure that the buffer has data to transfer
+	  if(count22>0) { //critical section of thread
+		  pthread_mutex_lock(&m);
+		  mq_send(mg_d2w2, buffer_d2w2[out_d2w2], size_s12, NULL);
+	  //Increments array variables
+		  out_d2w2 = (out_d2w2+1)%10;
+	      --count22;
 	      pthread_mutex_unlock(&m);
 	      } 
 	  else sleep(0.00001);
@@ -125,6 +158,7 @@ int main (int argc, char * argv[])
   //Set queue parameters and open queues
   struct mq_attr attr_c2d; //client to dealer ... and so on. c = client, d = dealer, w = worker
   struct mq_attr attr_d2w;
+  struct mq_attr attr_d2w2;
   struct mq_attr attr_w2d;
 
   attr_c2d.mq_maxmsg  = 10;
@@ -133,22 +167,27 @@ int main (int argc, char * argv[])
   attr_d2w.mq_maxmsg  = 10;
   attr_d2w.mq_msgsize = sizeof (S1_queue_T21);
   
+  attr_d2w2.mq_maxmsg  = 10;
+  attr_d2w2.mq_msgsize = sizeof (S2_queue_T21);
+  
   attr_w2d.mq_maxmsg  = 10;
   attr_w2d.mq_msgsize = sizeof (Rsp_queue_T21);
 
   mqd_t mq_c2d = mq_open (client2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_c2d);
   mqd_t mq_d2w = mq_open (dealer2worker1_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_d2w);
+  mqd_t mq_d2w2 = mq_open (dealer2worker2_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_d2w2);
   mqd_t mq_w2d = mq_open (worker2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_w2d);
 
 
   //Creates 4 threads. 3 for data transfer between processes, 
   //and 1 (the forwarding thread) for interthread communication
   //Each threading function uses mutexes to prevent race conditions
-  pthread_t c2dthread; pthread_t fthread;   pthread_t d2wthread;   pthread_t w2dthread;  
+  pthread_t c2dthread; pthread_t fthread;   pthread_t d2wthread; pthread_t d2w2thread;   pthread_t w2dthread;  
   pthread_create(&c2dthread, NULL, c2d_thread(), mq_c2d);
   pthread_create(  &fthread, NULL, forwarding_thread(), NULL);
-  pthread_create(&d2wthread, NULL, d2w_thread(), attr_d2w)
-  pthread_create(&w2dthread, NULL, w2d_thread(), attr_w2d)
+  pthread_create(&d2wthread, NULL, d2w_thread(), attr_d2w);
+  pthread_create(&d2w2thread, NULL, d2w2_thread(), attr_d2w2);
+  pthread_create(&w2dthread, NULL, w2d_thread(), attr_w2d);
 
   //The following are children process to run the client and worker
   
@@ -181,6 +220,13 @@ int main (int argc, char * argv[])
   else {perror("D2W queue not closed");}
   if(pthread_cancel(d2wthread)==0){printf("D2W thread terminated");};
   else {perror("D2W thread not terminated");}
+  
+  if(mq_unlink(dealer2worker2_name) == 0) {printf("D2W2 queue marked for deletion");}
+  else {perror("D2W2 queue not unlinked");}
+  if(mq_close(dealer2worker2_name)==0){printf("D2W2 queue closed by parent thread");};
+  else {perror("D2W2 queue not closed");}
+  if(pthread_cancel(d2w2thread)==0){printf("D2W2 thread terminated");};
+  else {perror("D2W2 thread not terminated");}
   
   if(mq_unlink(worker2dealer_name) == 0) {printf("W2D queue marked for deletion");}
   else {perror("W2D queue not unlinked");}
