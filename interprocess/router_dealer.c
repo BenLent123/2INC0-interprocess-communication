@@ -42,8 +42,8 @@ pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
 //Creates circular buffers for data transfers
   req_queue_x buffer_c2d[10]; int in_c2d = 0; int out_c2d = 0; int count1 = 0; int size_req = sizeof(req_queue_x);
-  S1_queue_X buffer_d2w[10]; int in_d2w = 0; int out_d2w = 0; int count2 = 0; int size_rsp = sizeof(S1_queue_X);
-  Rsp_queue_X buffer_w2d[10];
+  S1_queue_X buffer_d2w[10]; int in_d2w = 0; int out_d2w = 0; int count2 = 0; int size_s1 = sizeof(S1_queue_X);
+  Rsp_queue_X buffer_w2d[10]; int in_w2d = 0; int out_w2d = 0; int count3 = 0; int size_rsp = sizeof(Rsp_queue_X);
 
 //Threading functions
 void c2d_thread(struct mq_attr * attr){
@@ -100,7 +100,7 @@ void d2w_thread(struct mq_attr * attr){
 	  //If statement is used to make sure that the buffer has data to transfer
 	  if(count2>0) { //critical section of thread
 		  pthread_mutex_lock(&m);
-		  mq_send(mg_d2w, buffer_d2w[out_d2w], size_rsp, NULL);
+		  mq_send(mg_d2w, buffer_d2w[out_d2w], size_s1, NULL);
 	  //Increments array variables
 		  out_d2w = (out_d2w+1)%10;
 	      --count2;
@@ -108,6 +108,20 @@ void d2w_thread(struct mq_attr * attr){
 	      } 
 	  else sleep(0.00001);
 	  //If the buffer is empty, the thread sleeps for 10 microseconds to allow the buffer to fill
+  }
+}
+
+void w2d_thread(struct mq_attr * attr){
+  //Creates queue according to fed parameters to read client data
+  mqd_t mq_w2d = mq_open (worker2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr);
+  
+  while(true){
+	  pthread_mutex_lock(&m);
+	  Rsp_queue_X rsp;
+	  mq_receive(mg_w2d, rsp, size_rsp, NULL);
+	  printf("RequestID: %d \n Result: %d", rsp.request_id,rsp.result);
+	  pthread_mutex_unlock(&m);
+
   }
 }
 
@@ -134,15 +148,13 @@ int main (int argc, char * argv[])
 
 
 
-  //Creates 4 threads, one for each data flow path (c2d, d2w, w2d, d2c) so that all 4 queues can excecute simultaneously
+  //Creates 4 threads, one for each data flow path so that all 4 queues can excecute simultaneously
   //Each threading function uses mutexes to prevent race conditions
-  pthread_t c2dthread; pthread_t fthread;   pthread_t d2wthread;   pthread_t w2dthread;   pthread_t d2cthread; 
+  pthread_t c2dthread; pthread_t fthread;   pthread_t d2wthread;   pthread_t w2dthread;  
   pthread_create(&c2dthread, NULL, c2d_thread(), attr_c2d);
   pthread_create(  &fthread, NULL, forwarding_thread(), NULL);
   pthread_create(&d2wthread, NULL, d2w_thread(), attr_d2w)
-  
   pthread_create(&w2dthread, NULL, w2d_thread(), attr_w2d)
-  pthread_create(&d2cthread, NULL, d2c_thread(), attr_d2c)
 
   
   
