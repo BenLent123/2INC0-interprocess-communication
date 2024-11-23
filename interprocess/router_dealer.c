@@ -29,6 +29,8 @@
 #include "settings.h"  
 #include "messages.h"
 
+//Behold, a program with 6 concurrent threads. 
+
 char client2dealer_name[30];
 char dealer2worker1_name[30];
 char dealer2worker2_name[30];
@@ -43,7 +45,7 @@ pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
   S2_queue_T21 buffer_d2w[10]; int in_d2w2 = 0; int out_d2w2 = 0; int count22 = 0; int size_s12 = sizeof(S2_queue_T21);
   Rsp_queue_T21 buffer_w2d[10]; int in_w2d = 0; int out_w2d = 0; int count3 = 0; int size_rsp = sizeof(Rsp_queue_T21);
 
-//Threading functions
+//Threading functions. The threads don't have error checking to keep them lightweight. This could be changed.
 void c2d_thread(mqd_t mq_c2d){
   
   while(true){
@@ -178,17 +180,27 @@ int main (int argc, char * argv[])
   mqd_t mq_d2w2 = mq_open (dealer2worker2_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_d2w2);
   mqd_t mq_w2d = mq_open (worker2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_w2d);
 
+ //Check if queues were opened correctly
+ 
+  if((mq_c2d == (mqd_t) –1)|| (mq_d2w == (mqd_t) –1) || (mq_d2w2 == (mqd_t) –1) || (mq_w2d == (mqd_t) –1))
+   {perror("queue opening failed"); exit(1);}
+   else printf("Queues opened successfully");
+
 
   //Creates 4 threads. 3 for data transfer between processes, 
   //and 1 (the forwarding thread) for interthread communication
   //Each threading function uses mutexes to prevent race conditions
   pthread_t c2dthread; pthread_t fthread;   pthread_t d2wthread; pthread_t d2w2thread;   pthread_t w2dthread;  
-  pthread_create(&c2dthread, NULL, c2d_thread(), mq_c2d);
-  pthread_create(  &fthread, NULL, forwarding_thread(), NULL);
-  pthread_create(&d2wthread, NULL, d2w_thread(), attr_d2w);
-  pthread_create(&d2w2thread, NULL, d2w2_thread(), attr_d2w2);
-  pthread_create(&w2dthread, NULL, w2d_thread(), attr_w2d);
-
+  if (
+	(pthread_create(&c2dthread, NULL, c2d_thread(), mq_c2d) == 0) &&
+	(pthread_create(  &fthread, NULL, forwarding_thread(), NULL)  == 0) &&
+	(pthread_create(&d2wthread, NULL, d2w_thread(), attr_d2w)  == 0) &&
+	(pthread_create(&d2w2thread, NULL, d2w2_thread(), attr_d2w2)  == 0) &&
+	(pthread_create(&w2dthread, NULL, w2d_thread(), attr_w2d)  == 0) 
+	){
+	  printf("Threads created successfully");}
+   else {printf("Threads created successfully"); exit(1);}
+  
   //The following are children process to run the client and worker
   
   pid_t clientID = fork();
@@ -199,8 +211,10 @@ int main (int argc, char * argv[])
   if (workerID < 0){perror("Worker failed"); exit (1);}
 
   //run the children processes. NOTE: FILL OUT FILES TO RUN
-  if (clientID == 0){execlp ("./client", "client",client2dealer_name , &m, NULL); perror ("Client execlp() failed");}
-  if (workerID == 0){execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed");}
+  if (clientID == 0)
+	{execlp ("./client", "client",client2dealer_name , &m, NULL); perror ("Client execlp() failed");}
+  if (workerID == 0)
+	{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed");}
         
   // wait for the client to terminate
   waitpid (clientID, NULL, 0);   
