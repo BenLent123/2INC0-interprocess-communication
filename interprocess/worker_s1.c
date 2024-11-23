@@ -29,27 +29,42 @@ static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {
-    Rsp_queue_T21 rsp;
-    S1_queue_T21 req;
-    mqd_t channel   = mq_open(argv[1], O_WRONLY);
-    if(channel = (mqd_t)-1){
-        perror("worker 1 - channel opening failed");
+    if (argc< 3){
+        exit(EXIT_FAILURE);
     }
     
-    int result = mq_recieve(channel, (char*)&req, sizeof(S1_queue_T21),0);
+    Rsp_queue_T21 rsp;
+    S1_queue_T21 req;
+    mqd_t req_channel   = mq_open(argv[1], O_WRONLY);
+    if(channel == (mqd_t)-1){
+        perror("worker 1 - request channel opening failed");
+        exit(EXIT_FAILURE);
+    }
+    mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY);
+    if(channel == (mqd_t)-1){
+        perror("worker 1 - response channel opening failed");
+        exit(EXIT_FAILURE);
+    }
+
+
+    
+    int result = mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0);
     if(result == -1){
         perror("worker 1 - recieveing failed");
+        exit(EXIT_FAILURE);
     }
     rsleep(100);
     rsp.result = service(req.data);
     rsp.request_id = req.request_id;
 
-    if(mq_send(channel, (char*)&rsp, sizeof(Rsp_queue_T21)) == -1){
+    if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
         perror("worker 1 - sending failed");
-        mq_close(channel);
+        mq_close(rsp_channel);
+        exit(EXIT_FAILURE);
     }
     
-    mq_close(channel);
+    mq_close(rsp_channel);
+    mq_close(req_channel);   
     
     return(0);
 }
