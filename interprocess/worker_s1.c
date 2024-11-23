@@ -30,18 +30,19 @@ static void rsleep (int t);
 int main (int argc, char * argv[])
 {
     if (argc< 3){
+        fprintf(stderr,"usage: %s req rsp \n",argv[0]);
         exit(EXIT_FAILURE);
     }
     
     Rsp_queue_T21 rsp;
     S1_queue_T21 req;
-    mqd_t req_channel   = mq_open(argv[1], O_WRONLY);
-    if(channel == (mqd_t)-1){
+    mqd_t req_channel   = mq_open(argv[1], O_RDONLY);
+    if(req_channel == (mqd_t)-1){
         perror("worker 1 - request channel opening failed");
         exit(EXIT_FAILURE);
     }
     mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY);
-    if(channel == (mqd_t)-1){
+    if(rsp_channel == (mqd_t)-1){
         perror("worker 1 - response channel opening failed");
         exit(EXIT_FAILURE);
     }
@@ -60,6 +61,7 @@ int main (int argc, char * argv[])
     if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
         perror("worker 1 - sending failed");
         mq_close(rsp_channel);
+        mq_close(req_channel);
         exit(EXIT_FAILURE);
     }
     
