@@ -29,6 +29,7 @@ static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {
+    int pid_worker1 = getpid();
     if (argc< 3){
         fprintf(stderr,"usage: %s req rsp \n",argv[0]);
         exit(EXIT_FAILURE);
@@ -46,9 +47,6 @@ int main (int argc, char * argv[])
         perror("worker 1 - response channel opening failed");
         exit(EXIT_FAILURE);
     }
-
-
-    
     int result = mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0);
     if(result == -1){
         perror("worker 1 - recieveing failed");
@@ -71,26 +69,6 @@ int main (int argc, char * argv[])
     return(0);
 }
 
-
-// TODO:
-    // (see message_queue_test() in interprocess_basic.c)
-    //  * open the two message queues (whose names are provided in the
-    //    arguments)
-    //  * repeatedly:
-    //      - read from the S1 message queue the new job to do
-    //      - wait a random amount of time (e.g. rsleep(10000);)
-    //      - do the job 
-    //      - write the results to the Rsp message queue
-    //    until there are no more tasks to do
-    //  * close the message queues
-
-/*
- * rsleep(int t)
- *
- * The calling thread will be suspended for a random amount of time
- * between 0 and t microseconds
- * At the first call, the random generator is seeded with the current time
- */
 static void rsleep (int t)
 {
     static bool first_call = true;
