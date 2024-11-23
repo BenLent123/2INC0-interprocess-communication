@@ -37,18 +37,13 @@ char worker2dealer_name[30];
 //Creates mutex for access to buffer
 pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
-//Creates request holding variables
-//Request nextRequest;
-
 //Creates circular buffers for data transfers
   req_queue_x buffer_c2d[10]; int in_c2d = 0; int out_c2d = 0; int count1 = 0; int size_req = sizeof(req_queue_x);
   S1_queue_X buffer_d2w[10]; int in_d2w = 0; int out_d2w = 0; int count2 = 0; int size_s1 = sizeof(S1_queue_X);
   Rsp_queue_X buffer_w2d[10]; int in_w2d = 0; int out_w2d = 0; int count3 = 0; int size_rsp = sizeof(Rsp_queue_X);
 
 //Threading functions
-void c2d_thread(struct mq_attr * attr){
-  //Creates queue according to fed parameters to read client data
-  mqd_t mq_c2d = mq_open (client2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr);
+void c2d_thread(mqd_t mq_c2d){
   
   while(true){
 	  //Blocking read of client queue, data is stored in c2d buffer
@@ -91,9 +86,7 @@ void forwarding_thread(){
   }
 }
 
-void d2w_thread(struct mq_attr * attr){
-  //Creates queue according to fed parameters to send worker data
-  mqd_t mq_d2w = mq_open (dealer2worker1_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr);
+void d2w_thread(mqd_t mq_d2w){
   
   while(true){
 	  //Transfer data from client buffer to worker queue
@@ -111,10 +104,7 @@ void d2w_thread(struct mq_attr * attr){
   }
 }
 
-void w2d_thread(struct mq_attr * attr){
-  //Creates queue according to fed parameters to read client data
-  mqd_t mq_w2d = mq_open (worker2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr);
-  
+void w2d_thread(mqd_t mq_w2d){  
   while(true){
 	  pthread_mutex_lock(&m);
 	  Rsp_queue_X rsp;
@@ -132,7 +122,7 @@ int main (int argc, char * argv[])
     fprintf (stderr, "%s: invalid arguments\n", argv[0]);
   }
   
-  //Set queue parameters
+  //Set queue parameters and open queues
   struct mq_attr attr_c2d; //client to dealer ... and so on. c = client, d = dealer, w = worker
   struct mq_attr attr_d2w;
   struct mq_attr attr_w2d;
@@ -146,17 +136,56 @@ int main (int argc, char * argv[])
   attr_w2d.mq_maxmsg  = 10;
   attr_w2d.mq_msgsize = sizeof (Rsp_queue_X);
 
+  mqd_t mq_c2d = mq_open (client2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_c2d);
+  mqd_t mq_d2w = mq_open (dealer2worker1_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_d2w);
+  mqd_t mq_w2d = mq_open (worker2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_w2d);
 
 
-  //Creates 4 threads, one for each data flow path so that all 4 queues can excecute simultaneously
+  //Creates 4 threads. 3 for data transfer between processes, 
+  //and 1 (the forwarding thread) for interthread communication
   //Each threading function uses mutexes to prevent race conditions
   pthread_t c2dthread; pthread_t fthread;   pthread_t d2wthread;   pthread_t w2dthread;  
-  pthread_create(&c2dthread, NULL, c2d_thread(), attr_c2d);
+  pthread_create(&c2dthread, NULL, c2d_thread(), mq_c2d);
   pthread_create(  &fthread, NULL, forwarding_thread(), NULL);
   pthread_create(&d2wthread, NULL, d2w_thread(), attr_d2w)
   pthread_create(&w2dthread, NULL, w2d_thread(), attr_w2d)
 
+  //The following are children process to run the client and worker
   
+  pid_t clientID = fork();
+  pid_t workerID = fork();
+  
+  //error catching
+  if (clientID < 0){perror("Client failed"); exit (1);}
+  if (workerID < 0){perror("Worker failed"); exit (1);}
+
+  //run the children processes. NOTE: FILL OUT FILES TO RUN
+  if (clientID == 0){execlp ("ps", "ps", "-l", NULL); perror ("Client execlp() failed");}
+  if (workerID == 0){execlp ("ps", "ps", "-l", NULL); perror ("worker execlp() failed");}
+        
+  // wait for the client to terminate
+  waitpid (clientID, NULL, 0);   
+  while((count1 != 0) | (count2 != 0) | (count3 != 0) ){} //waits until all buffers are emptied
+  
+  //The following section unlinks and closes all threads/queues
+  if(mq_unlink(client2dealer_name) == 0) {printf("Client terminated and C2D queue marked for deletion");}
+  else {perror("c2d queue not unlinked");}
+  if(mq_close(client2dealer_name)==0){printf("C2D queue closed by parent thread");};
+  else {perror("c2d queue not closed");}
+  if(pthread_cancel(c2dthread)==0){printf("C2D thread terminated");};
+  else {perror("c2d thread not terminated");}
+ 
+  if(mq_unlink(dealer2worker1_name) == 0) {printf("Client terminated and C2D queue marked for deletion");}
+  else {perror("c2d queue not unlinked");}
+  if(mq_close(dealer2worker1_name)==0){printf("C2D queue closed by parent thread");};
+  else {perror("c2d queue not closed");}
+  if(pthread_cancel(d2wthread)==0){printf("C2D thread terminated");};
+  else {perror("c2d thread not terminated");}
+  
+  if(mq_unlink(dealer2worker1_name) == 0) {printf("S1 queue marked for deletion");}
+  else {perror("S1 queue not unlinked");}
+  mq_close(dealer2worker1_name);
+  pthread_cancel(d2wthread);
   
   // TODO:
     //  * create the message queues (see message_queue_test() in
