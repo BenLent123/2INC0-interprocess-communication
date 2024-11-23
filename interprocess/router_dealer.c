@@ -160,8 +160,8 @@ int main (int argc, char * argv[])
   if (workerID < 0){perror("Worker failed"); exit (1);}
 
   //run the children processes. NOTE: FILL OUT FILES TO RUN
-  if (clientID == 0){execlp ("ps", "ps", "-l", NULL); perror ("Client execlp() failed");}
-  if (workerID == 0){execlp ("ps", "ps", "-l", NULL); perror ("worker execlp() failed");}
+  if (clientID == 0){execlp ("./client", "client",client2dealer_name , NULL); perror ("Client execlp() failed");}
+  if (workerID == 0){execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name NULL); perror ("worker execlp() failed");}
         
   // wait for the client to terminate
   waitpid (clientID, NULL, 0);   
