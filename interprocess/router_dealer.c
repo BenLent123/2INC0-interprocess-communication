@@ -166,16 +166,16 @@ int main (int argc, char * argv[])
   struct mq_attr attr_d2w2;
   struct mq_attr attr_w2d;
 
-  attr_c2d.mq_maxmsg  = 10;
+  attr_c2d.mq_maxmsg  = MQ_MAX_MESSAGES;
   attr_c2d.mq_msgsize = sizeof (req_queue_T21);
   
-  attr_d2w.mq_maxmsg  = 10;
+  attr_d2w.mq_maxmsg  = MQ_MAX_MESSAGES;
   attr_d2w.mq_msgsize = sizeof (S1_queue_T21);
   
-  attr_d2w2.mq_maxmsg  = 10;
+  attr_d2w2.mq_maxmsg  = MQ_MAX_MESSAGES;
   attr_d2w2.mq_msgsize = sizeof (S2_queue_T21);
   
-  attr_w2d.mq_maxmsg  = 10;
+  attr_w2d.mq_maxmsg  = MQ_MAX_MESSAGES;
   attr_w2d.mq_msgsize = sizeof (Rsp_queue_T21);
 
   mqd_t mq_c2d = mq_open (client2dealer_name, O_RONLY | O_CREAT | O_EXCL, 0666, attr_c2d);
@@ -205,31 +205,40 @@ int main (int argc, char * argv[])
    else {printf("Threads not created successfully"); exit(1);}
   
   //The following are children process to run the client and worker
+  //A loop goes through forking to create enough workers
+  pid_t clientID;
+  pid_t workerID[N_SERV1];
+  pid_t worker2ID[N_SERV2];
   
-  pid_t clientID = fork();
-  pid_t workerID = fork();
-  pid_t worker2ID = fork();
-
-  
-  //error catching
+  //Create client
+  clientID = fork();
   if (clientID < 0){perror("Client failed"); exit (1);}
-  if (workerID < 0){perror("Worker failed"); exit (1);}
-  if (worker2ID < 0){perror("Worker failed"); exit (1);}
-
-
-  //run the children processes. NOTE: FILL OUT FILES TO RUN
-  if (clientID == 0)
+  else if (clientID == 0)
 	{execlp ("./client", "client",client2dealer_name , &m, NULL); perror ("Client execlp() failed"); exit (1);}
-  if (workerID == 0)
-	{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
-  if (worker2ID == 0)
-	{execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
+  //If this part of the code is reached, the code is in the parent/router_dealer
   
+  for(int i =0; i<N_SERV1; i++){
+	  workerID[i] = fork();
+	  if (workerID[i] < 0){perror("Worker failed"); exit (1);}
+	  if (workerID[i] == 0)
+		{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
+	  //Only in the parent process will the code reach this point to loop around again
+  }
+  
+  for(int i =0; i<N_SERV2; i++){
+	  worker2ID[i] = fork();
+	  if (worker2ID[i] < 0){perror("Worker failed"); exit (1);}
+	  if (worker2ID[i] == 0)
+		{execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
+ 
+	  //Only in the parent process will the code reach this point to loop around again
+  }
+	 
   // wait for the client to terminate
   waitpid (clientID, NULL, 0);   
   while((count1 != 0) | (count2 != 0) | (count3 != 0) ){} //waits until all buffers are emptied
   
-  //Sends requests to workers to terminate themselves since they are no longer useful <--- capitalism lmao
+  //Sends requests to workers to terminate themselves since they are no longer useful
   S1_queue_T21 kill_signal1; 
   kill_signal1.request_id = -1;
   kill_signal1.data = 0;
@@ -237,9 +246,10 @@ int main (int argc, char * argv[])
   kill_signal2.request_id = -1;
   kill_signal2.data = 0;
   
+  //Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
   pthread_mutex_lock(&m); //Critical section start
-  mq_send(mg_d2w, &kill_signal1, size_s1, NULL);
-  mq_send(mg_d2w2, &kill_signal2, size_s12, NULL);
+  for(int i =0; i<N_SERV1; i++){mq_send(mg_d2w, &kill_signal1, size_s1, NULL);}
+  for(int i =0; i<N_SERV2; i++){mq_send(mg_d2w2, &kill_signal2, size_s12, NULL);}
   pthread_mutex_unlock(&m); //Critical section end
   
   //The following section unlinks and closes all threads/queues
