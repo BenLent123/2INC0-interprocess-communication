@@ -45,19 +45,21 @@ int main (int argc, char * argv[])
     mqd_t req_channel   = mq_open(argv[0], O_RDONLY);
     if(req_channel == (mqd_t)-1){
         perror("worker 1 - request channel opening failed");
+        mq_close(req_channel);
         exit(EXIT_FAILURE);
     }
 
     mqd_t rsp_channel   = mq_open(argv[1], O_WRONLY);
     if(rsp_channel == (mqd_t)-1){
         perror("worker 1 - response channel opening failed");
+        mq_close(rsp_channel);
         exit(EXIT_FAILURE);
     }
 
-    int result = mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0);
-
-    if(result == -1){
+    if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
         perror("worker 1 - recieveing failed");
+        mq_close(rsp_channel);
+        mq_close(req_channel);
         exit(EXIT_FAILURE);
     }
 
