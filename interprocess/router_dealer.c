@@ -40,114 +40,117 @@ char worker2dealer_name[30];
 pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
 //Creates circular buffers for data transfers
-  req_queue_T21 buffer_c2d[10]; int in_c2d = 0; int out_c2d = 0; int count1 = 0; int size_req = sizeof(req_queue_T21);
-  S1_queue_T21 buffer_d2w[10]; int in_d2w = 0; int out_d2w = 0; int count2 = 0; int size_s1 = sizeof(S1_queue_T21);
-  S2_queue_T21 buffer_d2w[10]; int in_d2w2 = 0; int out_d2w2 = 0; int count22 = 0; int size_s12 = sizeof(S2_queue_T21);
-  Rsp_queue_T21 buffer_w2d[10]; int in_w2d = 0; int out_w2d = 0; int count3 = 0; int size_rsp = sizeof(Rsp_queue_T21);
+req_queue_T21 buffer_c2d[10];   int count1 = 0; int size_req = sizeof(req_queue_T21);
+S1_queue_T21 buffer_d2w[10];   int count2 = 0; int size_s1 = sizeof(S1_queue_T21);
+S2_queue_T21 buffer_d2w2[10];  int count22 = 0; int size_s12 = sizeof(S2_queue_T21);
+Rsp_queue_T21 buffer_w2d[10]; int in_w2d = 0; int out_w2d = 0; int count3 = 0; int size_rsp = sizeof(Rsp_queue_T21);
 
 //Threading functions. The threads don't have error checking to keep them lightweight. This could be changed.
 void c2d_thread(mqd_t mq_c2d){
-  
-  while(true){
-	  //Blocking read of client queue, data is stored in c2d buffer
-	  //If statement is used to make sure that the buffer is not overloaded
-	  if(count1<10) { //critical section of thread
-		  pthread_mutex_lock(&m);
-		  mq_receive(mg_c2d, buffer_c2d[in_c2d], size_req, NULL);
-	  //Increments array variables
-		  in_c2d = (in_c2d+1)%10;
-	      ++count1;
-	      pthread_mutex_unlock(&m);
-	      } 
-	  else sleep(0.00001);
-	  //If the buffer is overloaded, the thread sleeps for 10 microseconds to allow the buffer to unload
-  }
+	//Description:
+	//This thread transfer data from c2d queue into c2d buffer
+	//The buffer is a circular buffer, so data does not need to be wiped, it will be overwritten in subsequent passes
+	//If(count1<10) statement is used to make sure that the buffer is not overloaded
+	//Since Count1 and the queues are shared variables they are protected with mutex
+	//mq_recieve does blocking read of client queue. If the queue is empty, this thread sleeps and other threads are processed
+	//The mutex is unlocked before in_c2d (pointer to first free spot on the buffer) is incremented as in_c2d is local var
+	//If the c2d buffer is full, the thread sleeps for 10 microseconds to allow forwarding thread to unload the buffer
+	
+	int in_c2d = 0;
+	while(true){
+		pthread_mutex_lock(&m); //Critical section start
+		if(count1<10) { 
+			mq_receive(mg_c2d, &buffer_c2d[in_c2d], size_req, NULL); 
+			++count1;
+			pthread_mutex_unlock(&m); //Critical section end (on this branch)
+			in_c2d = (in_c2d+1)%10;
+			} 
+		else sleep(0.00001);
+	}
 }
 
 void forwarding_thread(){
-	//This thread processes client data into the format needed by workers
+	//Description:
+	//It extracts data from the c2d buffer, processes it to the format needed by workers, then puts it in d2w buffers
 	S1_queue_T21 rsp;
 	S2_queue_T21 rsp2;
-  while(true){
-	  if(count1>0) { //critical section of thread
-		  pthread_mutex_lock(&m);
-		  //Extract data from buffer_c2d then put it in d2w or d2w2 buffers and update buffer variables
-		  if(buffer_c2d[out].service_id == 1){
-		  rsp.request_id = buffer_c2d[out].request_id;
-		  rsp.data = buffer_c2d[out].data;
-		  
-		  out_c2d = (out_c2d+1)%10;
-	      --count1;
-	      
-	      buffer_d2w[in] = rsp;
-	      
-	      in_d2w = (in_d2w+1)%10;
-	      ++count2;}
-	      //buffer for S2
-	      else if (buffer_c2d[out].service_id == 2){
-		  rsp2.request_id = buffer_c2d[out].request_id;
-		  rsp2.data = buffer_c2d[out].data;
-		  
-		  out_c2d = (out_c2d+1)%10;
-	      --count1;
-	      
-	      buffer_d2w2[in] = rsp2;
-	      
-	      in_d2w2 = (in_d2w2+1)%10;
-	      ++count22;}
-	      
-	      pthread_mutex_unlock(&m);
-	      } 
-	  else sleep(0.00001);
-	  //If the buffer is empty, the thread sleeps for 10 microseconds to allow the buffer to fill
-  }
+	int out_c2d = 0;
+	int in_d2w = 0;
+	int in_d2w2 = 0;
+	while(true){
+		pthread_mutex_lock(&m); //Critical section start
+		if(count1>0) {
+			if(buffer_c2d[out].service_id == 1){
+				rsp.request_id = buffer_c2d[out].request_id;
+				rsp.data = buffer_c2d[out].data;
+				--count1;
+				buffer_d2w[in] = rsp;
+				++count2;
+				pthread_mutex_unlock(&m); //Critical section end (on this branch)
+
+				out_c2d = (out_c2d+1)%10; 
+				in_d2w = (in_d2w+1)%10;
+				}
+			//buffer for S2
+			else if (buffer_c2d[out].service_id == 2){
+				rsp2.request_id = buffer_c2d[out].request_id;
+				rsp2.data = buffer_c2d[out].data;
+				--count1;
+				buffer_d2w2[in] = rsp2;
+				++count22;
+				pthread_mutex_unlock(&m); //Critical section end (on this branch)
+
+				in_d2w2 = (in_d2w2+1)%10;
+				out_c2d = (out_c2d+1)%10;
+				}
+			} 
+		else sleep(0.00001);
+	}
 }
 
 void d2w_thread(mqd_t mq_d2w){
-  
-  while(true){
-	  //Transfer data from client buffer to worker queue
-	  //If statement is used to make sure that the buffer has data to transfer
-	  if(count2>0) { //critical section of thread
-		  pthread_mutex_lock(&m);
-		  mq_send(mg_d2w, buffer_d2w[out_d2w], size_s1, NULL);
-	  //Increments array variables
-		  out_d2w = (out_d2w+1)%10;
-	      --count2;
-	      pthread_mutex_unlock(&m);
+	//Description:
+	//This thread transfers data from d2w buffer to d2w/S1 queue
+	int out_d2w = 0;
+	while(true){
+		pthread_mutex_lock(&m); ////Critical section start
+		if(count2>0) { 
+			mq_send(mg_d2w, &buffer_d2w[out_d2w], size_s1, NULL);
+			--count2;
+			pthread_mutex_unlock(&m); //Critical section end (on this branch)
+			out_d2w = (out_d2w+1)%10;
 	      } 
 	  else sleep(0.00001);
-	  //If the buffer is empty, the thread sleeps for 10 microseconds to allow the buffer to fill
   }
 }
 
 void d2w2_thread(mqd_t mq_d2w2){
-  
-  while(true){
-	  //Transfer data from client buffer to worker queue
-	  //If statement is used to make sure that the buffer has data to transfer
-	  if(count22>0) { //critical section of thread
-		  pthread_mutex_lock(&m);
-		  mq_send(mg_d2w2, buffer_d2w2[out_d2w2], size_s12, NULL);
-	  //Increments array variables
-		  out_d2w2 = (out_d2w2+1)%10;
-	      --count22;
-	      pthread_mutex_unlock(&m);
+	//Description:
+	//This thread transfers data from d2w2 buffer to d2w2/S2 queue
+	int out_d2w2 = 0;
+	while(true){
+		pthread_mutex_lock(&m); ////Critical section start
+		if(count22>0) { 
+			mq_send(mg_d2w2, &buffer_d2w2[out_d2w2], size_s12, NULL);
+			--count22;
+			pthread_mutex_unlock(&m); //Critical section end (on this branch)
+			out_d2w2 = (out_d2w2+1)%10;
 	      } 
 	  else sleep(0.00001);
-	  //If the buffer is empty, the thread sleeps for 10 microseconds to allow the buffer to fill
   }
 }
 
 void w2d_thread(mqd_t mq_w2d){  
-  while(true){
-	  pthread_mutex_lock(&m);
-	  Rsp_queue_T21 rsp;
-	  mq_receive(mg_w2d, rsp, size_rsp, NULL);
-	  printf("RequestID: %d \n Result: %d", rsp.request_id,rsp.result);
-	  pthread_mutex_unlock(&m);
+	//Description:
+	//This thread prints the response of the workers on stdout
+	Rsp_queue_T21 rsp;
+	while(true){
+		pthread_mutex_lock(&m); //Critical section start
+		mq_receive(mg_w2d, &rsp, size_rsp, NULL);
+		pthread_mutex_unlock(&m); //Critical section end
+		printf("RequestID: %d \n Result: %d", rsp.request_id,rsp.result);
 
-  }
+	}
 }
 
 int main (int argc, char * argv[])
@@ -205,20 +208,39 @@ int main (int argc, char * argv[])
   
   pid_t clientID = fork();
   pid_t workerID = fork();
+  pid_t worker2ID = fork();
+
   
   //error catching
   if (clientID < 0){perror("Client failed"); exit (1);}
   if (workerID < 0){perror("Worker failed"); exit (1);}
+  if (worker2ID < 0){perror("Worker failed"); exit (1);}
+
 
   //run the children processes. NOTE: FILL OUT FILES TO RUN
   if (clientID == 0)
 	{execlp ("./client", "client",client2dealer_name , &m, NULL); perror ("Client execlp() failed"); exit (1);}
   if (workerID == 0)
 	{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
-        
+  if (worker2ID == 0)
+	{execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
+  
   // wait for the client to terminate
   waitpid (clientID, NULL, 0);   
   while((count1 != 0) | (count2 != 0) | (count3 != 0) ){} //waits until all buffers are emptied
+  
+  //Sends requests to workers to terminate themselves since they are no longer useful <--- capitalism lmao
+  S1_queue_T21 kill_signal1; 
+  kill_signal1.request_id = -1;
+  kill_signal1.data = 0;
+  S2_queue_T21 kill_signal2; 
+  kill_signal2.request_id = -1;
+  kill_signal2.data = 0;
+  
+  pthread_mutex_lock(&m); //Critical section start
+  mq_send(mg_d2w, &kill_signal1, size_s1, NULL);
+  mq_send(mg_d2w2, &kill_signal2, size_s12, NULL);
+  pthread_mutex_unlock(&m); //Critical section end
   
   //The following section unlinks and closes all threads/queues
   if(mq_unlink(client2dealer_name) == 0) {printf("Client terminated and C2D queue marked for deletion");}
