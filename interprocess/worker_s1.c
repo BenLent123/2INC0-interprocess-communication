@@ -29,10 +29,18 @@ static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {
-    //int pid_worker1 = getpid();
-    // if (pid_worker1 == 0){
-    //     perror("worker 1 - not called by child");
-    //     exit(EXIT_FAILURE);
+    // --> worker continuously working till termination
+    // func(){
+    // while(true){
+    //     worker does work ...
+    //     if (worker issues){
+    //         break
+    //     }
+    //     if (termination signal){
+    //         break
+    //     }
+    // }
+    //  rest of code..
     // }
     
     if (argc< 2){
