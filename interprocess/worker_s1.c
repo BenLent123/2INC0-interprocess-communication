@@ -30,10 +30,11 @@ static void rsleep (int t);
 int main (int argc, char * argv[])
 {
     //int pid_worker1 = getpid();
-    // if (pid_worker1 != 0){
+    // if (pid_worker1 == 0){
     //     perror("worker 1 - not called by child");
     //     exit(EXIT_FAILURE);
     // }
+    
     if (argc< 2){
         perror("worker 1 - to many arguments");
         exit(EXIT_FAILURE);
