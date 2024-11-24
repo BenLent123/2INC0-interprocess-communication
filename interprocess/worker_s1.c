@@ -2,9 +2,9 @@
  * Operating Systems  (2INCO)  Practical Assignment
  * Interprocess Communication
  *
- * STUDENT_NAME_1 (STUDENT_NR_1)
- * STUDENT_NAME_2 (STUDENT_NR_2)
- *
+ * Ben Lentschig 1824805
+ * Nitin Singhal
+ * Daniel Tyukov 
  * Grading:
  * Your work will be evaluated based on the following criteria:
  * - Satisfaction of all the specifications
@@ -29,29 +29,38 @@ static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {
-    int pid_worker1 = getpid();
-    if (argc< 3){
-        fprintf(stderr,"usage: %s req rsp \n",argv[0]);
+    //int pid_worker1 = getpid();
+    // if (pid_worker1 != 0){
+    //     perror("worker 1 - not called by child");
+    //     exit(EXIT_FAILURE);
+    // }
+    if (argc< 2){
+        perror("worker 1 - to many arguments");
         exit(EXIT_FAILURE);
     }
     
     Rsp_queue_T21 rsp;
     S1_queue_T21 req;
-    mqd_t req_channel   = mq_open(argv[1], O_RDONLY);
+
+    mqd_t req_channel   = mq_open(argv[0], O_RDONLY);
     if(req_channel == (mqd_t)-1){
         perror("worker 1 - request channel opening failed");
         exit(EXIT_FAILURE);
     }
-    mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY);
+
+    mqd_t rsp_channel   = mq_open(argv[1], O_WRONLY);
     if(rsp_channel == (mqd_t)-1){
         perror("worker 1 - response channel opening failed");
         exit(EXIT_FAILURE);
     }
+
     int result = mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0);
+
     if(result == -1){
         perror("worker 1 - recieveing failed");
         exit(EXIT_FAILURE);
     }
+
     rsleep(100);
     rsp.result = service(req.data);
     rsp.request_id = req.request_id;
