@@ -17,6 +17,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <errno.h>      // for perror()
 #include <unistd.h>     // for getpid()
 #include <mqueue.h>     // for mq-stuff
@@ -50,6 +54,7 @@ int main (int argc, char * argv[])
         mq_close(rsp_channel);
         exit(EXIT_FAILURE);
     }
+    //pthread_lock(argv[3]);
 
         while(1){
 
@@ -78,7 +83,8 @@ int main (int argc, char * argv[])
     }
    
    mq_close(rsp_channel);
-   mq_close(req_channel); 
+   mq_close(req_channel);
+   //pthread_unlock(argv[3]); 
    return 0;    
 }
 
