@@ -32,10 +32,10 @@ int main (int argc, char * argv[])
    Rsp_queue_T21 rsp;
    S1_queue_T21 req;
 
-    if (argc< 2){
-        perror("worker 1 - to many arguments");
-        exit(EXIT_FAILURE);
-    }
+    // if (argc< 2){
+    //     perror("worker 1 - to many arguments");
+    //     exit(EXIT_FAILURE);
+    // }
 
     mqd_t req_channel   = mq_open(argv[0], O_RDONLY);
     if(req_channel == (mqd_t)-1){
