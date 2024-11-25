@@ -1,0 +1,119 @@
+//Creates circular buffers for data transfers
+req_queue_T21 buffer_c2d[10];   int count1 = 0; int size_req = sizeof(req_queue_T21);
+S1_queue_T21 buffer_d2w[10];   int count2 = 0; int size_s1 = sizeof(S1_queue_T21);
+S2_queue_T21 buffer_d2w2[10];  int count22 = 0; int size_s12 = sizeof(S2_queue_T21);
+Rsp_queue_T21 buffer_w2d[10]; int in_w2d = 0; int out_w2d = 0; int count3 = 0; int size_rsp = sizeof(Rsp_queue_T21);
+
+void c2d_thread(mqd_t mq_c2d){
+	//Description:
+	//This thread transfer data from c2d queue into c2d buffer
+	//The buffer is a circular buffer, so data does not need to be wiped, it will be overwritten in subsequent passes
+	//If(count1<10) statement is used to make sure that the buffer is not overloaded
+	//Since Count1 and the queues are shared variables they are protected with mutex
+	//mq_recieve does blocking read of client queue. If the queue is empty, this thread sleeps and other threads are processed
+	//The mutex is unlocked before in_c2d (pointer to first free spot on the buffer) is incremented as in_c2d is local var
+	//If the c2d buffer is full, the thread sleeps for 10 microseconds to allow forwarding thread to unload the buffer
+	
+	int in_c2d = 0;
+	while(true){
+		pthread_mutex_lock(&m); //Critical section start
+		if(count1<10) { 
+			mq_receive(mg_c2d, &buffer_c2d[in_c2d], size_req, NULL); 
+			++count1;
+			pthread_mutex_unlock(&m); //Critical section end (on this branch)
+			in_c2d = (in_c2d+1)%10;
+			} 
+		else sleep(0.00001);
+	}
+}
+
+void forwarding_thread(){
+	//Description:
+	//It extracts data from the c2d buffer, processes it to the format needed by workers, then puts it in d2w buffers
+	req_queue_T21 req;
+	S1_queue_T21 rsp;
+	S2_queue_T21 rsp2;
+	int out_c2d = 0;
+	int in_d2w = 0;
+	int in_d2w2 = 0;
+	while(true){
+		pthread_mutex_lock(&m); //Critical section start
+		if(count1>0) {
+			if(buffer_c2d[out].service_id == 1){
+				rsp.request_id = buffer_c2d[out].request_id;
+				rsp.data = buffer_c2d[out].data;
+				--count1;
+				buffer_d2w[in] = rsp;
+				++count2;
+				pthread_mutex_unlock(&m); //Critical section end (on this branch)
+
+				out_c2d = (out_c2d+1)%10; 
+				in_d2w = (in_d2w+1)%10;
+				}
+			//buffer for S2
+			else if (buffer_c2d[out].service_id == 2){
+				rsp2.request_id = buffer_c2d[out].request_id;
+				rsp2.data = buffer_c2d[out].data;
+				--count1;
+				buffer_d2w2[in] = rsp2;
+				++count22;
+				pthread_mutex_unlock(&m); //Critical section end (on this branch)
+
+				in_d2w2 = (in_d2w2+1)%10;
+				out_c2d = (out_c2d+1)%10;
+				}
+			} 
+		else sleep(0.00001);
+	}
+}
+
+
+
+void d2w_thread(mqd_t mq_d2w){
+	//Description:
+	//This thread transfers data from d2w buffer to d2w/S1 queue
+	int out_d2w = 0;
+	while(true){
+		pthread_mutex_lock(&m); ////Critical section start
+		if(count2>0) { 
+			mq_send(mg_d2w, &buffer_d2w[out_d2w], size_s1, NULL);
+			--count2;
+			pthread_mutex_unlock(&m); //Critical section end (on this branch)
+			out_d2w = (out_d2w+1)%10;
+	      } 
+	  else sleep(0.00001);
+  }
+}
+
+void d2w2_thread(mqd_t mq_d2w2){
+	//Description:
+	//This thread transfers data from d2w2 buffer to d2w2/S2 queue
+	int out_d2w2 = 0;
+	while(true){
+		pthread_mutex_lock(&m); ////Critical section start
+		if(count22>0) { 
+			mq_send(mg_d2w2, &buffer_d2w2[out_d2w2], size_s12, NULL);
+			--count22;
+			pthread_mutex_unlock(&m); //Critical section end (on this branch)
+			out_d2w2 = (out_d2w2+1)%10;
+	      } 
+	  else sleep(0.00001);
+  }
+}
+
+// in main
+
+pthread_t c2dthread; pthread_t d2wthread; pthread_t d2w2thread;
+
+(pthread_create(&c2dthread, NULL, c2d_thread(), mq_c2d) == 0) &&
+	(pthread_create(&d2wthread, NULL, d2w_thread(), attr_d2w)  == 0) &&
+	(pthread_create(&d2w2thread, NULL, d2w2_thread(), attr_d2w2)  == 0) &&
+	
+  if(pthread_cancel(c2dthread)==0){printf("C2D thread terminated");};
+  else {perror("c2d thread not terminated");}
+  
+    if(pthread_cancel(d2wthread)==0){printf("D2W thread terminated");};
+  else {perror("D2W thread not terminated");}
+  
+    if(pthread_cancel(d2w2thread)==0){printf("D2W2 thread terminated");};
+  else {perror("D2W2 thread not terminated");}

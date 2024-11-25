@@ -1,3 +1,33 @@
 - Router dealer calls worker via execlp() but does not input argv[] such as execlp(./worker1, req_id, data, NULL) 
 - Router dealer process -> recieve from client --> differentiate request --> fork() to make a child --> child executes worker 1 or 2 --> worker does service and sends back result
-- Worker 1 and 2 Cannot work with "while (true) {} --> as break condition has to exsist
+- Worker 1 and 2 Cannot work with "while (true) {} --> as break condition has to exist
+
+
+
+
+
+
+
+
+
+
+
+
+
+exmple
+
+int main() {
+    int counter = 0; // Example variable to check termination
+    int max_count = 5; // Termination condition
+
+    while (1) { // Infinite loop
+        if (counter < max_count) {
+            printf("Doing stuff... Counter = %d\n", counter);
+            counter++; // Update termination checker
+        } else {
+            break; // Exit the loop
+        }
+    }
+    printf("Exited the loop.\n");
+    return 0;
+}
