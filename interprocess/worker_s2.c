@@ -66,7 +66,7 @@ int main (int argc, char * argv[])
             exit(EXIT_FAILURE);
         }
 
-        if(req_request_id == -1 && req.data == 0){
+        if(req.request_id == -1 && req.data == 0){
             fprintf("worker 2 - termination signal");
             break;
         }
