@@ -55,17 +55,18 @@ void forwarding_thread(){
 	int in_d2w2 = 0;
 	while(true){
 		pthread_mutex_lock(&m); //Critical section start
-		mq_receive(mq_c2d, &req, size_req, NULL); 
+		mq_receive(mq_c2d, (char*) &req, size_req, NULL); 
 		if(req.service_id == 1){
 			rsp.request_id = req.request_id;
 			rsp.data = req.data;
-			mq_send(mg_d2w, &rsp, size_s1, NULL);
+			mq_send(mg_d2w, (char*) &rsp, size_s1, NULL);
 			pthread_mutex_unlock(&m); //Critical section end (on this branch)
 			}
 		else if (req.service_id == 2){
 			rsp2.request_id = req.request_id;
 			rsp2.data = req.data;
-			mq_send(mg_d2w2, &rsp2, size_s12, NULL);
+			mq_send(mg_d2w2, (char*)
+			&rsp2, size_s12, NULL);
 			pthread_mutex_unlock(&m); //Critical section end (on this branch)
 			}
 		} 
@@ -77,7 +78,7 @@ void w2d_thread(mqd_t mq_w2d){
 	Rsp_queue_T21 rsp;
 	while(true){
 		pthread_mutex_lock(&m); //Critical section start
-		mq_receive(mg_w2d, &rsp, size_rsp, NULL);
+		mq_receive(mg_w2d, (char*) &rsp, size_rsp, NULL);
 		pthread_mutex_unlock(&m); //Critical section end
 		printf("RequestID: %d \n Result: %d", rsp.request_id,rsp.result);
 
