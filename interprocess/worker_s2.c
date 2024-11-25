@@ -34,64 +34,57 @@ static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {    
-    // --> worker continuously working till termination
-    // func(){
-    // while(true){
-    //     worker does work ...
-    //     if (worker issues){
-    //         break
-    //     }
-    //     if (termination signal){
-    //         break
-    //     }
-    // }
-    //  rest of code..
-    // }
-    
-    if (argc< 2){
-        perror("worker 2 - to many arguments");
-        exit(EXIT_FAILURE);
-    }
-    
     Rsp_queue_T21 rsp;
-    S1_queue_T21 req;
+    S2_queue_T21 req;
 
-    mqd_t req_channel   = mq_open(argv[0], O_RDONLY);
-    if(req_channel == (mqd_t)-1){
-        perror("worker 2 - request channel opening failed");
-        mq_close(req_channel);
-        exit(EXIT_FAILURE);
+   while(1){
+
+        if (argc< 2){
+            perror("worker 2 - to many arguments");
+            exit(EXIT_FAILURE);
+        }
+
+        mqd_t req_channel   = mq_open(argv[0], O_RDONLY);
+        if(req_channel == (mqd_t)-1){
+            perror("worker 2 - request channel opening failed");
+            mq_close(req_channel);
+            exit(EXIT_FAILURE);
+        }
+
+        mqd_t rsp_channel   = mq_open(argv[1], O_WRONLY);
+        if(rsp_channel == (mqd_t)-1){
+            perror("worker 2 - response channel opening failed");
+            mq_close(rsp_channel);
+            exit(EXIT_FAILURE);
+        }
+
+        if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
+            perror("worker 2 - recieveing failed");
+            mq_close(rsp_channel);
+            mq_close(req_channel);
+            exit(EXIT_FAILURE);
+        }
+
+        if(req_request_id == -1 && req.data == 0){
+            fprintf("worker 2 - termination signal");
+            break;
+        }
+
+        rsleep(100);
+        rsp.result = service(req.data);
+        rsp.request_id = req.request_id;
+
+        if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
+            perror("worker 2 - sending failed");
+            mq_close(rsp_channel);
+            mq_close(req_channel);
+            exit(EXIT_FAILURE);
+        }
     }
-
-    mqd_t rsp_channel   = mq_open(argv[1], O_WRONLY);
-    if(rsp_channel == (mqd_t)-1){
-        perror("worker 2 - response channel opening failed");
-        mq_close(rsp_channel);
-        exit(EXIT_FAILURE);
-    }
-
-    if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
-        perror("worker 2 - recieveing failed");
-        mq_close(rsp_channel);
-        mq_close(req_channel);
-        exit(EXIT_FAILURE);
-    }
-
-    rsleep(100);
-    rsp.result = service(req.data);
-    rsp.request_id = req.request_id;
-
-    if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
-        perror("worker 2 - sending failed");
-        mq_close(rsp_channel);
-        mq_close(req_channel);
-        exit(EXIT_FAILURE);
-    }
-    
-    mq_close(rsp_channel);
-    mq_close(req_channel);   
-    
-    return(0);
+   
+   mq_close(rsp_channel);
+   mq_close(req_channel); 
+   return 0;   
 }
 
 /*
