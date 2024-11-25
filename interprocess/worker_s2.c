@@ -41,14 +41,14 @@ int main (int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
 
-    mqd_t req_channel   = mq_open(argv[0], O_RDONLY);
+    mqd_t req_channel   = mq_open(argv[1], O_RDONLY);
     if(req_channel == (mqd_t)-1){
         perror("worker 2 - request channel opening failed");
         mq_close(req_channel);
         exit(EXIT_FAILURE);
     }
 
-    mqd_t rsp_channel   = mq_open(argv[1], O_WRONLY);
+    mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY);
     if(rsp_channel == (mqd_t)-1){
         perror("worker 2 - response channel opening failed");
         mq_close(rsp_channel);
