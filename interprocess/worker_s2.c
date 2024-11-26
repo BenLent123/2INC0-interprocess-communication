@@ -35,7 +35,6 @@ int main (int argc, char * argv[])
 {    
     Rsp_queue_T21 rsp;
     S2_queue_T21 req;
-    
     // if (argc> 4){
     //     perror("worker 2 - to many arguments");
     //     exit(EXIT_FAILURE);
