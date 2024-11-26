@@ -36,37 +36,33 @@ int main (int argc, char * argv[])
    Rsp_queue_T21 rsp;
    S1_queue_T21 req;
 
-    if (argc> 4){
-        perror("worker 1 - to many arguments");
-        exit(EXIT_FAILURE);
-    }
+    // if (argc> 4){
+    //     perror("worker 1 - to many arguments\n");
+    //     exit(EXIT_FAILURE);
+    // }
 
     mqd_t req_channel   = mq_open(argv[1], O_RDONLY);
     if(req_channel == (mqd_t)-1){
-        perror("worker 1 - request channel opening failed");
-        mq_close(req_channel);
+        perror("worker 1 - request channel opening failed\n");
         exit(EXIT_FAILURE);
     }
 
     mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY);
     if(rsp_channel == (mqd_t)-1){
-        perror("worker 1 - response channel opening failed");
-        mq_close(rsp_channel);
+        perror("worker 1 - response channel opening failed\n");
         exit(EXIT_FAILURE);
     }
-    //pthread_lock(argv[3]);
-
         while(1){
 
         if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
-            perror("worker 1 - recieveing failed");
+            perror("worker 1 - recieveing failed\n");
             mq_close(rsp_channel);
             mq_close(req_channel);
             exit(EXIT_FAILURE);
         }
 
         if(req.request_id == -1 && req.data == 0){
-            fprintf("worker 1 - termination signal");
+            fprintf(stderr,"worker 1 - termination signal\n");
             break;
         }
 
@@ -84,7 +80,6 @@ int main (int argc, char * argv[])
    
    mq_close(rsp_channel);
    mq_close(req_channel);
-   //pthread_unlock(argv[3]); 
    return 0;    
 }
 
