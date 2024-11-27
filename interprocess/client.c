@@ -3,7 +3,6 @@
  * Interprocess Communication
  *
  * Daniel Tyukov (1819283)
- * STUDENT_NAME_2 (STUDENT_NR_2)
  *
  * Grading:
  * Your work will be evaluated based on the following criteria:
