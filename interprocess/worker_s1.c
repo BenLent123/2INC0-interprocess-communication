@@ -29,10 +29,6 @@
 #include "messages.h"
 #include "service1.h"
 
-char client2dealer[30] = "/c2d";
-char dealer2worker1[30] = "/d2w";
-char dealer2worker2[30] = "/d2w2";
-char worker2dealer[30] = "/w2d";
 
 static void rsleep (int t);
 

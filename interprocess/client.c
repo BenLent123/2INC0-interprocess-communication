@@ -24,14 +24,7 @@
 
 #include "messages.h"
 #include "request.h"
-
-char client2dealer[30] = "/c2d";
-char dealer2worker1[30] = "/d2w";
-char dealer2worker2[30] = "/d2w2";
-char worker2dealer[30] = "/w2d";
-
-static void rsleep (int t);
-
+#include "settings.h"
 
 int main (int argc, char * argv[])
 {
@@ -39,10 +32,20 @@ int main (int argc, char * argv[])
   struct mq_attr attr_d2w;
   struct mq_attr attr_d2w2;
   struct mq_attr attr_w2d;
+  
+  req_queue_T21 req;
+  int size_req = sizeof(req_queue_T21);
+  req.request_id = 1;
+  req.service_id = 1;
+  req.data = 456;
 
   attr_c2d.mq_maxmsg  = MQ_MAX_MESSAGES;
   attr_c2d.mq_msgsize = size_req;
-	mqd_t mq_c2d = mq_open (client2dealer_name, O_RDWR | O_EXCL, 0666, attr_c2d);
+  
+	mqd_t mq_c2d = mq_open (argv[1], O_RDWR | O_EXCL, 0666, attr_c2d);
+	mq_send(mq_c2d, (char*) &req, size_req, 0);
+	mq_close(mq_c2d);
+	
 	
 	
     // TODO:
