@@ -37,10 +37,6 @@ int main (int argc, char * argv[])
 {    
     Rsp_queue_T21 rsp;
     S2_queue_T21 req;
-    //  struct mq_attr attr_d2w;
-    // attr_d2w.mq_curmsgs = 1;
-    // attr_d2w.mq_maxmsg = MQ_MAX_MESSAGES;
-    // attr_d2w.mq_msgsize = sizeof(S2_queue_T21);
 
     mqd_t req_channel   = mq_open(argv[1], O_RDONLY);
     if(req_channel == (mqd_t)-1){
@@ -55,7 +51,7 @@ int main (int argc, char * argv[])
     }
 
     while((1)){
-        if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
+        if(mq_receive(req_channel, (char*)&req, sizeof(S2_queue_T21),0) == -1){
             perror("worker 2 - recieveing failed");
             mq_close(rsp_channel);
             mq_close(req_channel);
@@ -71,7 +67,6 @@ int main (int argc, char * argv[])
             mq_close(req_channel);
             exit(EXIT_FAILURE);
             }
-        // mq_getattr(req_channel, &attr_d2w);
         }else {
             break;
         }
