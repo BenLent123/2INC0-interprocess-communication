@@ -37,7 +37,7 @@ int main (int argc, char * argv[])
   int size_req = sizeof(req_queue_T21);
   req.request_id = 1;
   req.service_id = 1;
-  req.data = 456;
+  req.data = 5;
 
   attr_c2d.mq_maxmsg  = MQ_MAX_MESSAGES;
   attr_c2d.mq_msgsize = size_req;

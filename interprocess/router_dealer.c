@@ -99,6 +99,14 @@ int main (int argc, char * argv[])
   else if (clientID == 0)
 	{execlp ("./client", "client",client2dealer_name , NULL); perror ("Client execlp() failed"); exit (1);}
   //If this part of the code is reached, the code is in the parent/router_dealer
+  
+  //Termination signals for when the workers have done their jobs
+  S1_queue_T21 kill_signal1; 
+  kill_signal1.request_id = -1;
+  kill_signal1.data = 0;
+  S2_queue_T21 kill_signal2; 
+  kill_signal2.request_id = -1;
+  kill_signal2.data = 0;
 
   while(true){
 		mq_receive(mq_c2d, (char*) &req, size_req, NULL); 
@@ -120,8 +128,11 @@ int main (int argc, char * argv[])
 			if (worker2ID == 0)
 				{execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, NULL); perror ("worker execlp() failed"); exit (1);}
 			}
-			mq_receive(mq_w2d, (char*) &res, size_res, NULL);
-			printf("RequestID: %d \n Result: %d", res.request_id, res.result);
+			if(mq_receive(mq_w2d, (char*) &res, size_res, NULL) != -1){
+			if(req.service_id==1) mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0);
+			if(req.service_id==2) mq_send(mq_d2w2, (char*) &kill_signal2, size_s12, 0);}
+			int z = res.result;
+			printf("Result: %d", z);
 			cpid = waitpid(clientID, &c_stat, WNOHANG);
 			if(cpid == 0) {break;}
 		}
