@@ -37,52 +37,7 @@ const char * worker2dealer_name = "/w2d";
 int size_req = sizeof(req_queue_T21);
 int size_s1 = sizeof(S1_queue_T21);
 int size_s12 = sizeof(S2_queue_T21);
-int size_rsp = sizeof(Rsp_queue_T21);
-
-//Threading functions. The threads don't have error checking to keep them lightweight. This could be changed.
-void * forwarding_thread(void* queues){
-	//mqd_t mq_c2d,mqd_t mq_d2w,mqd_t mq_d2w2
-	//Description:
-	//It extracts data from the c2d buffer, processes it to the format needed by workers, then puts it in d2w buffers
-	req_queue_T21 req;
-	S1_queue_T21 rsp;
-	S2_queue_T21 rsp2;
-	//Unpack args
-	mqd_t * q = (mqd_t *) queues;
-	mqd_t mq_c2d = q[0]; mqd_t mq_d2w = q[1]; mqd_t mq_d2w2 = q[2]; 
-	while(true){
-		pthread_mutex_lock(&m); //Critical section start
-		mq_receive(mq_c2d, (char*) &req, size_req, NULL); 
-		if(req.service_id == 1){
-			rsp.request_id = req.request_id;
-			rsp.data = req.data;
-			mq_send(mq_d2w, (char*) &rsp, size_s1, 0);
-			pthread_mutex_unlock(&m); //Critical section end (on this branch)
-			}
-		else if (req.service_id == 2){
-			rsp2.request_id = req.request_id;
-			rsp2.data = req.data;
-			mq_send(mq_d2w2, (char*) &rsp2, size_s12, 0);
-			pthread_mutex_unlock(&m); //Critical section end (on this branch)
-			}
-		} 
-	}
-
-void * w2d_thread(void* queues){  
-	//Description:
-	//This thread prints the response of the workers on stdout
-	Rsp_queue_T21 rsp;
-	//unpack data
-	mqd_t * q = (mqd_t *) queues;
-	mqd_t mq_w2d = q[3];
-	while(true){
-		pthread_mutex_lock(&m); //Critical section start
-		mq_receive(mq_w2d, (char*) &rsp, size_rsp, NULL);
-		pthread_mutex_unlock(&m); //Critical section end
-		printf("RequestID: %d \n Result: %d", rsp.request_id,rsp.result);
-
-	}
-}
+int size_res = sizeof(Rsp_queue_T21);
 
 int main (int argc, char * argv[])
 {
@@ -94,6 +49,7 @@ int main (int argc, char * argv[])
   req_queue_T21 req;
   S1_queue_T21 rsp;
   S2_queue_T21 rsp2;
+  Rsp_queue_T21 res;
   
   //Set queue parameters and open queues
   struct mq_attr attr_c2d; //client to dealer ... and so on. c = client, d = dealer, w = worker
@@ -111,7 +67,7 @@ int main (int argc, char * argv[])
   attr_d2w2.mq_msgsize = size_s12;
   
   attr_w2d.mq_maxmsg  = MQ_MAX_MESSAGES;
-  attr_w2d.mq_msgsize = size_rsp;
+  attr_w2d.mq_msgsize = size_res;
 
   mq_unlink(client2dealer_name);
   mq_unlink(dealer2worker1_name);
@@ -128,12 +84,12 @@ int main (int argc, char * argv[])
  //Check if queues were opened correctly
  
   if((mq_c2d == (mqd_t) -1)|| (mq_d2w == (mqd_t) -1) || (mq_d2w2 == (mqd_t) -1) || (mq_w2d == (mqd_t) -1))
-   {perror("queue opening failed"); exit(1);}
-   else printf("Queues opened successfully");
+   {perror("queue opening failed\n"); exit(1);}
+   else fprintf(stderr,"Queues opened successfully\n");
 
   //The following are children process to run the client and worker
   //A loop goes through forking to create enough workers
-  pid_t clientID;
+  pid_t clientID; int c_stat = 0; pid_t cpid;
   pid_t workerID;
   pid_t worker2ID;
   
@@ -141,7 +97,7 @@ int main (int argc, char * argv[])
   clientID = fork();
   if (clientID < 0){perror("Client failed"); exit (1);}
   else if (clientID == 0)
-	{execlp ("./client", "client",client2dealer_name , &m, NULL); perror ("Client execlp() failed"); exit (1);}
+	{execlp ("./client", "client",client2dealer_name , NULL); perror ("Client execlp() failed"); exit (1);}
   //If this part of the code is reached, the code is in the parent/router_dealer
 
   while(true){
@@ -151,25 +107,25 @@ int main (int argc, char * argv[])
 			rsp.data = req.data;
 			mq_send(mq_d2w, (char*) &rsp, size_s1, 0);
 			workerID = fork();
-			if (workerID[i] < 0){perror("Worker failed"); exit (1);}
-			if (workerID[i] == 0)
-				{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
+			if (workerID < 0){perror("Worker failed"); exit (1);}
+			if (workerID == 0)
+				{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, NULL); perror ("worker execlp() failed"); exit (1);}
 			}
 		else if (req.service_id == 2){
 			rsp2.request_id = req.request_id;
 			rsp2.data = req.data;
 			mq_send(mq_d2w2, (char*) &rsp2, size_s12, 0);
-			worker2ID[i] = fork();
-			if (worker2ID[i] < 0){perror("Worker failed"); exit (1);}
-			if (worker2ID[i] == 0)
-				{execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
- 
+			worker2ID = fork();
+			if (worker2ID < 0){perror("Worker failed"); exit (1);}
+			if (worker2ID == 0)
+				{execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, NULL); perror ("worker execlp() failed"); exit (1);}
 			}
-			
+			mq_receive(mq_w2d, (char*) &res, size_res, NULL);
+			printf("RequestID: %d \n Result: %d", res.request_id, res.result);
+			cpid = waitpid(clientID, &c_stat, WNOHANG);
+			if(cpid == 0) {break;}
 		}
-		
-  waitpid (clientID, NULL, 0);   
-  
+		  
   //Get queue status
   mq_getattr(mq_c2d, &attr_c2d);
   mq_getattr(mq_d2w, &attr_d2w);
@@ -177,27 +133,11 @@ int main (int argc, char * argv[])
   mq_getattr(mq_w2d, &attr_w2d);
 
   while((attr_c2d.mq_curmsgs != 0) || (attr_d2w.mq_curmsgs != 0) || (attr_d2w2.mq_curmsgs != 0) || (attr_w2d.mq_curmsgs != 0)){
-	  sleep(0.00001); //wait for threads to make progress then check if queues have emptied
+	  sleep(0.00001); //wait for queues have emptied
 	  mq_getattr(mq_c2d, &attr_c2d);
 	  mq_getattr(mq_d2w, &attr_d2w);
 	  mq_getattr(mq_d2w2, &attr_d2w2);
 	  mq_getattr(mq_w2d, &attr_w2d);}
-  
-  //while((count1 != 0) | (count2 != 0) | (count3 != 0) ){} //waits until all buffers are emptied
-  
-  //Sends requests to workers to terminate themselves since they are no longer useful
-  S1_queue_T21 kill_signal1; 
-  kill_signal1.request_id = -1;
-  kill_signal1.data = 0;
-  S2_queue_T21 kill_signal2; 
-  kill_signal2.request_id = -1;
-  kill_signal2.data = 0;
-  
-  //Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
-  pthread_mutex_lock(&m); //Critical section start
-  for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0);}
-  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s12, 0);}
-  pthread_mutex_unlock(&m); //Critical section end
   
   //The following section unlinks and closes all threads/queues
   if(mq_unlink(client2dealer_name) != 0) {perror("c2d queue not unlinked");}
@@ -211,11 +151,7 @@ int main (int argc, char * argv[])
   
   if(mq_unlink(worker2dealer_name) != 0) {perror("W2D queue not unlinked");}
   if(mq_close(mq_w2d)!=0)    {perror("W2D queue not closed");}
-  if(pthread_cancel(w2dthread)!=0)       {perror("W2D thread not terminated");}
-  
-  if(pthread_cancel(fthread)!=0)         {perror("forwarding thread not terminated");}
-  
-  pthread_mutex_destroy(&m);
+    
   // TODO:
     //  * create the message queues (see message_queue_test() in
     //    interprocess_basic.c)

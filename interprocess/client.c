@@ -46,7 +46,7 @@ int main (int argc, char * argv[])
 	mq_send(mq_c2d, (char*) &req, size_req, 0);
 	mq_close(mq_c2d);
 	
-	
+	exit(1);
 	
     // TODO:
     // (see message_queue_test() in interprocess_basic.c)
