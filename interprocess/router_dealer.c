@@ -29,11 +29,10 @@
 
 #include "settings.h"  
 #include "messages.h"
-
-char client2dealer_name[30];
-char dealer2worker1_name[30];
-char dealer2worker2_name[30];
-char worker2dealer_name[30];
+char client2dealer[30] = "/c2d";
+char dealer2worker1[30] = "/d2w";
+char dealer2worker2[30] = "/d2w2";
+char worker2dealer[30] = "/w2d";
 
 //Creates mutex for access to buffer
 pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
@@ -114,10 +113,10 @@ int main (int argc, char * argv[])
   attr_w2d.mq_maxmsg  = MQ_MAX_MESSAGES;
   attr_w2d.mq_msgsize = size_rsp;
 
-  mqd_t mq_c2d = mq_open (client2dealer_name, O_WRONLY | O_CREAT | O_EXCL, 0666, attr_c2d);
-  mqd_t mq_d2w = mq_open (dealer2worker1_name, O_WRONLY | O_CREAT | O_EXCL, 0666, attr_d2w);
-  mqd_t mq_d2w2 = mq_open (dealer2worker2_name, O_WRONLY | O_CREAT | O_EXCL, 0666, attr_d2w2);
-  mqd_t mq_w2d = mq_open (worker2dealer_name, O_WRONLY | O_CREAT | O_EXCL, 0666, attr_w2d);
+  mqd_t mq_c2d = mq_open (client2dealer_name, O_RDWR | O_CREAT | O_EXCL, 0666, attr_c2d);
+  mqd_t mq_d2w = mq_open (dealer2worker1_name, O_RDWR | O_CREAT | O_EXCL, 0666, attr_d2w);
+  mqd_t mq_d2w2 = mq_open (dealer2worker2_name, O_RDWR | O_CREAT | O_EXCL, 0666, attr_d2w2);
+  mqd_t mq_w2d = mq_open (worker2dealer_name, O_RDWR | O_CREAT | O_EXCL, 0666, attr_w2d);
 
   mqd_t queues[4] = {mq_c2d,mq_d2w,mq_d2w2,mq_w2d};
 
