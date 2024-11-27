@@ -3,7 +3,7 @@
  * Interprocess Communication
  *
  * Nitin Singhal (1725963)
- * STUDENT_NAME_2 (STUDENT_NR_2)
+ * Daniel Tyukov (1819283)
  *
  * Grading:
  * Your work will be evaluated based on the following criteria:
