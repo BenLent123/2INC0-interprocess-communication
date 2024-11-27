@@ -1,4 +1,3 @@
-
 CC=gcc
 CFLAGS=-Wall -ggdb2
 LIBS=-lrt -lm
@@ -19,6 +18,3 @@ worker_s1: worker_s1.c service1.c messages.h service1.h
 
 worker_s2: worker_s2.c service2.c messages.h service2.h
 	$(CC) $(CFLAGS) -o worker_s2 worker_s2.c service2.c $(LIBS)
-
-
-

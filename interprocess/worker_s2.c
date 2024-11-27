@@ -32,7 +32,6 @@
 
 static void rsleep (int t);
 
-
 int main (int argc, char * argv[])
 {    
     Rsp_queue_T21 rsp;
@@ -62,19 +61,19 @@ int main (int argc, char * argv[])
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
             if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
-            perror("worker 2 - sending failed");
-            mq_close(rsp_channel);
-            mq_close(req_channel);
-            exit(EXIT_FAILURE);
+                perror("worker 2 - sending failed");
+                mq_close(rsp_channel);
+                mq_close(req_channel);
+                exit(EXIT_FAILURE);
             }
         }else {
             break;
         }
     }
    
-   mq_close(rsp_channel);
-   mq_close(req_channel); 
-   return 0;   
+    mq_close(rsp_channel);
+    mq_close(req_channel); 
+    return 0;   
 }
 
 /*
