@@ -24,14 +24,18 @@
 #include <errno.h>    
 #include <unistd.h>    // for execlp
 #include <mqueue.h>    // for mq
+#include <pthread.h>   //I'm threading
+
 
 #include "settings.h"  
 #include "messages.h"
-
 const char * client2dealer_name = "/c2d";
 const char * dealer2worker1_name = "/d2w";
 const char * dealer2worker2_name = "/d2w2";
 const char * worker2dealer_name = "/w2d";
+
+//Creates mutex for access to buffer
+pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
 
 //Some variables
 int size_req = sizeof(req_queue_T21);
@@ -91,10 +95,6 @@ int main (int argc, char * argv[])
     fprintf (stderr, "%s: invalid arguments\n", argv[0]);
   }
   
-  req_queue_T21 req;
-  S1_queue_T21 rsp;
-  S2_queue_T21 rsp2;
-  
   //Set queue parameters and open queues
   struct mq_attr attr_c2d; //client to dealer ... and so on. c = client, d = dealer, w = worker
   struct mq_attr attr_d2w;
@@ -131,11 +131,22 @@ int main (int argc, char * argv[])
    {perror("queue opening failed"); exit(1);}
    else printf("Queues opened successfully");
 
+
+  //Creates 2 threads. 1 for data transfer from client to worker, and 1 to read results. The parent
+  // is on duty to watch if the client terminates or not
+  //Each threading function uses mutexes to prevent race conditions
+   pthread_t fthread;    pthread_t w2dthread;  
+  if (
+	(pthread_create(  &fthread, NULL, forwarding_thread, (void*) queues)  == 0) &&
+	(pthread_create(&w2dthread, NULL, w2d_thread, (void*) queues)  == 0) 
+	){}
+   else {perror("Threads not created successfully"); exit(1);}
+  
   //The following are children process to run the client and worker
   //A loop goes through forking to create enough workers
   pid_t clientID;
-  pid_t workerID;
-  pid_t worker2ID;
+  pid_t workerID[N_SERV1];
+  pid_t worker2ID[N_SERV2];
   
   //Create client
   clientID = fork();
@@ -143,31 +154,25 @@ int main (int argc, char * argv[])
   else if (clientID == 0)
 	{execlp ("./client", "client",client2dealer_name , &m, NULL); perror ("Client execlp() failed"); exit (1);}
   //If this part of the code is reached, the code is in the parent/router_dealer
-
-  while(true){
-		mq_receive(mq_c2d, (char*) &req, size_req, NULL); 
-		if(req.service_id == 1){
-			rsp.request_id = req.request_id;
-			rsp.data = req.data;
-			mq_send(mq_d2w, (char*) &rsp, size_s1, 0);
-			workerID = fork();
-			if (workerID[i] < 0){perror("Worker failed"); exit (1);}
-			if (workerID[i] == 0)
-				{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
-			}
-		else if (req.service_id == 2){
-			rsp2.request_id = req.request_id;
-			rsp2.data = req.data;
-			mq_send(mq_d2w2, (char*) &rsp2, size_s12, 0);
-			worker2ID[i] = fork();
-			if (worker2ID[i] < 0){perror("Worker failed"); exit (1);}
-			if (worker2ID[i] == 0)
-				{execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
+  
+  for(int i =0; i<N_SERV1; i++){
+	  workerID[i] = fork();
+	  if (workerID[i] < 0){perror("Worker failed"); exit (1);}
+	  if (workerID[i] == 0)
+		{execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
+	  //Only in the parent process will the code reach this point to loop around again
+  }
+  
+  for(int i =0; i<N_SERV2; i++){
+	  worker2ID[i] = fork();
+	  if (worker2ID[i] < 0){perror("Worker failed"); exit (1);}
+	  if (worker2ID[i] == 0)
+		{execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, &m, NULL); perror ("worker execlp() failed"); exit (1);}
  
-			}
-			
-		}
-		
+	  //Only in the parent process will the code reach this point to loop around again
+  }
+	 
+  // wait for the client to terminate
   waitpid (clientID, NULL, 0);   
   
   //Get queue status
