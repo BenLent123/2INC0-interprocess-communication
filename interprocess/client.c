@@ -42,7 +42,7 @@ int main (int argc, char * argv[])
   attr_c2d.mq_maxmsg  = MQ_MAX_MESSAGES;
   attr_c2d.mq_msgsize = size_req;
   
-	mqd_t mq_c2d = mq_open (argv[1], O_RDWR | O_EXCL, 0666, attr_c2d);
+	mqd_t mq_c2d = mq_open (argv[1], O_RDWR, 0666, &attr_c2d);
 	mq_send(mq_c2d, (char*) &req, size_req, 0);
 	mq_close(mq_c2d);
 	

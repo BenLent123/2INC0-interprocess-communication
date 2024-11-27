@@ -118,10 +118,10 @@ int main (int argc, char * argv[])
   mq_unlink(dealer2worker2_name);
   mq_unlink(worker2dealer_name);
 
-  mqd_t mq_c2d = mq_open (client2dealer_name, O_RDWR | O_CREAT | O_EXCL, 0666, attr_c2d);
-  mqd_t mq_d2w = mq_open (dealer2worker1_name, O_RDWR | O_CREAT | O_EXCL, 0666, attr_d2w);
-  mqd_t mq_d2w2 = mq_open (dealer2worker2_name, O_RDWR | O_CREAT | O_EXCL, 0666, attr_d2w2);
-  mqd_t mq_w2d = mq_open (worker2dealer_name, O_RDWR | O_CREAT | O_EXCL, 0666, attr_w2d);
+  mqd_t mq_c2d = mq_open (client2dealer_name, O_RDWR | O_CREAT , 0600, &attr_c2d);
+  mqd_t mq_d2w = mq_open (dealer2worker1_name, O_RDWR | O_CREAT, 0600, &attr_d2w);
+  mqd_t mq_d2w2 = mq_open (dealer2worker2_name, O_RDWR | O_CREAT, 0600, &attr_d2w2);
+  mqd_t mq_w2d = mq_open (worker2dealer_name, O_RDWR | O_CREAT , 0600, &attr_w2d);
 
   mqd_t queues[4] = {mq_c2d,mq_d2w,mq_d2w2,mq_w2d};
 
