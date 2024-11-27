@@ -31,7 +31,7 @@
 
 
 static void rsleep (int t);
-
+//comment
 
 int main (int argc, char * argv[])
 {
@@ -43,13 +43,13 @@ int main (int argc, char * argv[])
     //     exit(EXIT_FAILURE);
     // }
 
-    mqd_t req_channel   = mq_open(argv[1], O_RDONLY);
+    mqd_t req_channel   = mq_open(argv[1], O_RDONLY); // whats argv1
     if(req_channel == (mqd_t)-1){
         perror("worker 1 - request channel opening failed\n");
         exit(EXIT_FAILURE);
     }
 
-    mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY);
+    mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY); //--> whats argv2
     if(rsp_channel == (mqd_t)-1){
         perror("worker 1 - response channel opening failed\n");
         exit(EXIT_FAILURE);
