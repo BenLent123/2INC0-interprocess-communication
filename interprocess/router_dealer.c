@@ -269,8 +269,8 @@ int main (int argc, char * argv[])
 	  mq_getattr(mq_w2d, &attr_w2d);}
   
   //Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
-  for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0);}
-  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0);}
+  for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); printf("sent kill signal to worker 1\n");}
+  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); printf("sent kill signal to worker 2\n");}
 
     // Close the message queues
     mq_close(mq_c2d);
