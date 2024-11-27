@@ -52,8 +52,13 @@ int main (int argc, char * argv[])
         perror("worker 1 - response channel opening failed\n");
         exit(EXIT_FAILURE);
     }
+<<<<<<< HEAD
         while(1){
 
+=======
+        while((int) attr_d2w.mq_curmsgs !=0){
+        printf("in da loop 1");
+>>>>>>> 51107ddba9a82b923847ad6b9fbfe0daae97b41e
         if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
             perror("worker 1 - recieveing failed\n");
             mq_close(rsp_channel);
