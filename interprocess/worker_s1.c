@@ -61,7 +61,6 @@ int main (int argc, char * argv[])
             exit(EXIT_FAILURE);
         }
 
-        if(req.request_id != -1 && req.data != 0){
             rsleep(100);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
@@ -72,9 +71,6 @@ int main (int argc, char * argv[])
             exit(EXIT_FAILURE);
             }
             mq_getattr(req_channel, &attr_d2w); 
-        }else{
-            break;
-        }
     }
    
    mq_close(rsp_channel);
