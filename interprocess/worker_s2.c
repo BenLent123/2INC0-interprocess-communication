@@ -55,7 +55,7 @@ int main (int argc, char * argv[])
     }
 
     while(attr_d2w.mq_curmsgs !=0){
-
+        printf("in da loop");
         if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
             perror("worker 2 - recieveing failed");
             mq_close(rsp_channel);
