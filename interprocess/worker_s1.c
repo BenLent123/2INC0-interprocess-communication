@@ -35,6 +35,8 @@ int main (int argc, char * argv[])
 {
    Rsp_queue_T21 rsp;
    S1_queue_T21 req;
+   struct mq_getattr attr_d2w;
+   attr_d2w.mq_curmsgs = 1;
 
     mqd_t req_channel   = mq_open(argv[1], O_RDONLY); 
     if(req_channel == (mqd_t)-1){
@@ -47,15 +49,16 @@ int main (int argc, char * argv[])
         perror("worker 1 - response channel opening failed\n");
         exit(EXIT_FAILURE);
     }
+        while(attr_d2w.mq_curmsgs !=0){
 
-    if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
+        if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
             perror("worker 1 - recieveing failed\n");
             mq_close(rsp_channel);
             mq_close(req_channel);
             exit(EXIT_FAILURE);
-    }
+        }
 
-    
+        if(req.request_id != -1 && req.data != 0){
             rsleep(100);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
@@ -65,8 +68,11 @@ int main (int argc, char * argv[])
             mq_close(req_channel);
             exit(EXIT_FAILURE);
             }
-    
-    
+            mq_getattr(req_channel, &attr_d2w) 
+        }else{
+            break;
+        }
+    }
    
    mq_close(rsp_channel);
    mq_close(req_channel);
