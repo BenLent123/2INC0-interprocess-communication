@@ -26,37 +26,64 @@
 #include "request.h"
 #include "settings.h"
 
-int main (int argc, char * argv[])
-{
-  struct mq_attr attr_c2d; //client to dealer ... and so on. c = client, d = dealer, w = worker
-  struct mq_attr attr_d2w;
-  struct mq_attr attr_d2w2;
-  struct mq_attr attr_w2d;
-  
-  req_queue_T21 req;
-  int size_req = sizeof(req_queue_T21);
-  req.request_id = 1;
-  req.service_id = 1;
-  req.data = 5;
+#include <stdio.h>
+#include <stdlib.h>
+#include <errno.h>      // for perror()
+#include <mqueue.h>     // for mq-stuff
 
-  attr_c2d.mq_maxmsg  = MQ_MAX_MESSAGES;
-  attr_c2d.mq_msgsize = size_req;
-  
-	mqd_t mq_c2d = mq_open (argv[1], O_RDWR, 0666, &attr_c2d);
-	mq_send(mq_c2d, (char*) &req, size_req, 0);
-	mq_close(mq_c2d);
-	
-	exit(1);
-	
-    // TODO:
-    // (see message_queue_test() in interprocess_basic.c)
-    //  * open the message queue (whose name is provided in the
-    //    arguments)
-    //  * repeatingly:
-    //      - get the next job request 
-    //      - send the request to the Req message queue
-    //    until there are no more requests to send
-    //  * close the message queue
-    
-    return (0);
+#include "messages.h"
+#include "request.h"
+#include "settings.h"
+
+int main(int argc, char *argv[])
+{
+    if (argc != 2)
+    {
+        fprintf(stderr, "Usage: %s <Req_queue_name>\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+
+    mqd_t mq_c2d;
+    struct mq_attr attr_c2d;
+    req_queue_T21 req;
+    int size_req = sizeof(req_queue_T21);
+
+    attr_c2d.mq_flags = 0;
+    attr_c2d.mq_maxmsg = MQ_MAX_MESSAGES;
+    attr_c2d.mq_msgsize = size_req;
+    attr_c2d.mq_curmsgs = 0;
+
+    mq_c2d = mq_open(argv[1], O_WRONLY);
+
+    if (mq_c2d == (mqd_t)-1)
+    {
+        perror("Client: mq_open");
+        exit(EXIT_FAILURE);
+    }
+
+    int jobID, data, serviceID;
+    int ret;
+
+    while ((ret = getNextRequest(&jobID, &data, &serviceID)) != NO_REQ)
+    {
+        if (ret != NO_ERR)
+        {
+            fprintf(stderr, "Client: Error getting next request\n");
+            break;
+        }
+
+        req.request_id = jobID;
+        req.service_id = serviceID;
+        req.data = data;
+
+        if (mq_send(mq_c2d, (char *)&req, size_req, 0) == -1)
+        {
+            perror("Client: mq_send");
+            break;
+        }
+    }
+
+    mq_close(mq_c2d);
+
+    return 0;
 }
