@@ -36,7 +36,7 @@ int main (int argc, char * argv[])
 {
    Rsp_queue_T21 rsp;
    S1_queue_T21 req;
-   struct mq_getattr attr_d2w;
+   struct mq_attr attr_d2w;
    attr_d2w.mq_curmsgs = 1;
    attr_d2w.mq_maxmsg = MQ_MAX_MESSAGES;
    attr_d2w.mq_msgsize = sizeof(S1_queue_T21);
@@ -71,7 +71,7 @@ int main (int argc, char * argv[])
             mq_close(req_channel);
             exit(EXIT_FAILURE);
             }
-            mq_getattr(req_channel, &attr_d2w) 
+            mq_getattr(req_channel, &attr_d2w); 
         }else{
             break;
         }
