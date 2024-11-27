@@ -156,8 +156,9 @@ int main (int argc, char * argv[])
     while (1)
     {
         // Check if client is still running
-        if (kill(clientID, 0) == -1 && errno == ESRCH)
+        if (waitpid(clientID, NULL, WNOHANG) == -1 )
         {
+			perror("Client died");
             client_running = 0;
         }
 
@@ -217,15 +218,16 @@ int main (int argc, char * argv[])
         }
 
         // If nothing happened and client is not running, check queues
-        if (!did_something)
-        {
+        //if (!did_something)
+        //{
             if (!client_running)
             {
                 // Check if all queues are empty
-                mq_getattr(mq_c2d, &attr_c2d);
-                mq_getattr(mq_d2w, &attr_d2w);
-                mq_getattr(mq_d2w2, &attr_d2w2);
-                mq_getattr(mq_w2d, &attr_w2d);
+                perror("Checking client");
+                if(mq_getattr(mq_c2d, &attr_c2d) == -1){perror("failed get_attr");}
+                if(mq_getattr(mq_d2w, &attr_d2w) == -1){perror("failed get_attr");}
+                if(mq_getattr(mq_d2w2, &attr_d2w2) == -1){perror("failed get_attr");}
+                if(mq_getattr(mq_w2d, &attr_w2d) == -1){perror("failed get_attr");}
 
                 if (attr_c2d.mq_curmsgs == 0 && attr_d2w.mq_curmsgs == 0 &&
                     attr_d2w2.mq_curmsgs == 0 && attr_w2d.mq_curmsgs == 0)
@@ -239,7 +241,7 @@ int main (int argc, char * argv[])
                 // Sleep briefly to prevent busy waiting
                 usleep(1);
             }
-        }
+        //}
     } //end of while loop
 	fprintf(stdout,"The edge point");
 
@@ -252,13 +254,13 @@ int main (int argc, char * argv[])
 	S1_queue_T21 kill_signal1; 
 	kill_signal1.request_id = -1;
 	kill_signal1.data = 0;
-  S2_queue_T21 kill_signal2; 
-  kill_signal2.request_id = -1;
-  kill_signal2.data = 0;
+	S2_queue_T21 kill_signal2; 
+	kill_signal2.request_id = -1;
+	kill_signal2.data = 0;
   
-  //Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
-  for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); fprintf(stdout,"sent kill signal to worker 1\n");}
-  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); fprintf(stdout,"sent kill signal to worker 2\n");}
+	//Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
+	for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); fprintf(stdout,"sent kill signal to worker 1\n");}
+	for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); fprintf(stdout,"sent kill signal to worker 2\n");}
 
     // Close the message queues
     mq_close(mq_c2d);
