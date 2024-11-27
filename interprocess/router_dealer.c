@@ -242,45 +242,35 @@ int main (int argc, char * argv[])
         }
     }
 
-    // Send termination messages to workers
-    S1_queue_T21 term_req_s1;
-    term_req_s1.request_id = -1;
-    term_req_s1.data = 0;
 
-    for (int i = 0; i < N_SERV1; i++)
-    {
-        if (mq_send(mq_d2w, (char *)&term_req_s1, size_s1, 0) == -1)
-        {
-            perror("Router-Dealer: mq_send termination to worker_s1");
-        }
-    }
-
-    S2_queue_T21 term_req_s2;
-    term_req_s2.request_id = -1;
-    term_req_s2.data = 0;
-
-    for (int i = 0; i < N_SERV2; i++)
-    {
-        if (mq_send(mq_d2w2, (char *)&term_req_s2, size_s2, 0) == -1)
-        {
-            perror("Router-Dealer: mq_send termination to worker_s2");
-        }
-    }
 
     // Wait for the client process to exit
     waitpid(clientID, NULL, 0);
     
       //Sends requests to workers to terminate themselves since they are no longer useful
-  S1_queue_T21 kill_signal1; 
-  kill_signal1.request_id = -1;
-  kill_signal1.data = 0;
+	S1_queue_T21 kill_signal1; 
+	kill_signal1.request_id = -1;
+	kill_signal1.data = 0;
   S2_queue_T21 kill_signal2; 
   kill_signal2.request_id = -1;
   kill_signal2.data = 0;
   
+        //Get queue status
+  mq_getattr(mq_c2d, &attr_c2d);
+  mq_getattr(mq_d2w, &attr_d2w);
+  mq_getattr(mq_d2w2, &attr_d2w2);
+  mq_getattr(mq_w2d, &attr_w2d);
+
+  while((attr_c2d.mq_curmsgs != 0) || (attr_d2w.mq_curmsgs != 0) || (attr_d2w2.mq_curmsgs != 0) || (attr_w2d.mq_curmsgs != 0)){
+	  sleep(0.00001); //wait for threads to make progress then check if queues have emptied
+	  mq_getattr(mq_c2d, &attr_c2d);
+	  mq_getattr(mq_d2w, &attr_d2w);
+	  mq_getattr(mq_d2w2, &attr_d2w2);
+	  mq_getattr(mq_w2d, &attr_w2d);}
+  
   //Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
   for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0);}
-  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s12, 0);}
+  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0);}
 
     // Close the message queues
     mq_close(mq_c2d);
