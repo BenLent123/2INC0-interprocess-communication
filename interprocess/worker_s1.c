@@ -81,6 +81,7 @@ int main (int argc, char * argv[])
    
     mq_close(rsp_channel);
     mq_close(req_channel);
+    exit(1);
     return 0;    
 }
 

@@ -209,7 +209,7 @@ int main (int argc, char * argv[])
 
             // Print the result
             printf("%d -> %d\n", res.request_id, res.result);
-            fflush(stdout);
+            //fflush(stdout);
         }
         else if (errno != EAGAIN && errno != EWOULDBLOCK)
         {
@@ -237,14 +237,15 @@ int main (int argc, char * argv[])
             else
             {
                 // Sleep briefly to prevent busy waiting
-                usleep(1000);
+                usleep(1);
             }
         }
-    }
-
+    } //end of while loop
+	fprintf(stdout,"The edge point");
 
 
     // Wait for the client process to exit
+    
     waitpid(clientID, NULL, 0);
     
       //Sends requests to workers to terminate themselves since they are no longer useful
@@ -255,22 +256,9 @@ int main (int argc, char * argv[])
   kill_signal2.request_id = -1;
   kill_signal2.data = 0;
   
-        //Get queue status
-  mq_getattr(mq_c2d, &attr_c2d);
-  mq_getattr(mq_d2w, &attr_d2w);
-  mq_getattr(mq_d2w2, &attr_d2w2);
-  mq_getattr(mq_w2d, &attr_w2d);
-
-  while((attr_c2d.mq_curmsgs != 0) || (attr_d2w.mq_curmsgs != 0) || (attr_d2w2.mq_curmsgs != 0) || (attr_w2d.mq_curmsgs != 0)){
-	  sleep(0.00001); //wait for threads to make progress then check if queues have emptied
-	  mq_getattr(mq_c2d, &attr_c2d);
-	  mq_getattr(mq_d2w, &attr_d2w);
-	  mq_getattr(mq_d2w2, &attr_d2w2);
-	  mq_getattr(mq_w2d, &attr_w2d);}
-  
   //Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
-  for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); printf("sent kill signal to worker 1\n");}
-  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); printf("sent kill signal to worker 2\n");}
+  for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); fprintf(stdout,"sent kill signal to worker 1\n");}
+  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); fprintf(stdout,"sent kill signal to worker 2\n");}
 
     // Close the message queues
     mq_close(mq_c2d);
