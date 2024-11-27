@@ -2,7 +2,7 @@
  * Operating Systems  (2INCO)  Practical Assignment
  * Interprocess Communication
  *
- * STUDENT_NAME_1 (STUDENT_NR_1)
+ * Daniel Tyukov (1819283)
  * STUDENT_NAME_2 (STUDENT_NR_2)
  *
  * Grading:
