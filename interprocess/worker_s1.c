@@ -28,6 +28,7 @@
 
 #include "messages.h"
 #include "service1.h"
+#include "settings.h"
 
 static void rsleep (int t);
 
@@ -37,6 +38,8 @@ int main (int argc, char * argv[])
    S1_queue_T21 req;
    struct mq_getattr attr_d2w;
    attr_d2w.mq_curmsgs = 1;
+   attr_d2w.mq_maxmsg = MQ_MAX_MESSAGES;
+   attr_d2w.mq_msgsize = sizeof(S1_queue_T21);
 
     mqd_t req_channel   = mq_open(argv[1], O_RDONLY); 
     if(req_channel == (mqd_t)-1){
