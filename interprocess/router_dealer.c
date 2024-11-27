@@ -267,14 +267,20 @@ int main (int argc, char * argv[])
         }
     }
 
-    // Wait for all worker processes to exit
-    for (int i = 0; i < N_SERV1 + N_SERV2; i++)
-    {
-        wait(NULL);
-    }
-
     // Wait for the client process to exit
     waitpid(clientID, NULL, 0);
+    
+      //Sends requests to workers to terminate themselves since they are no longer useful
+  S1_queue_T21 kill_signal1; 
+  kill_signal1.request_id = -1;
+  kill_signal1.data = 0;
+  S2_queue_T21 kill_signal2; 
+  kill_signal2.request_id = -1;
+  kill_signal2.data = 0;
+  
+  //Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
+  for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0);}
+  for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s12, 0);}
 
     // Close the message queues
     mq_close(mq_c2d);

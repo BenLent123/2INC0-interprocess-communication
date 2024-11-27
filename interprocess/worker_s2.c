@@ -54,8 +54,8 @@ int main (int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
 
-    while(attr_d2w.mq_curmsgs !=0){
-        printf("in da loop");
+    while((int) attr_d2w.mq_curmsgs !=0){
+        printf("in da loop 2 ");
         if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
             perror("worker 2 - recieveing failed");
             mq_close(rsp_channel);
@@ -70,7 +70,6 @@ int main (int argc, char * argv[])
             mq_close(rsp_channel);
             mq_close(req_channel);
             exit(EXIT_FAILURE);
-            
             mq_getattr(req_channel, &attr_d2w);
         }
     }
