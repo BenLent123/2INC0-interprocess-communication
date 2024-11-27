@@ -71,7 +71,8 @@ int main (int argc, char * argv[])
             mq_close(req_channel);
             exit(EXIT_FAILURE);
             mq_getattr(req_channel, &attr_d2w);
-        }
+            }
+        // mq_getattr(req_channel, &attr_d2w);
         }else {
             break;
         }
