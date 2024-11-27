@@ -29,11 +29,6 @@
 #include "messages.h"
 #include "service2.h"
 
-char client2dealer[30] = "/c2d";
-char dealer2worker1[30] = "/d2w";
-char dealer2worker2[30] = "/d2w2";
-char worker2dealer[30] = "/w2d";
-
 static void rsleep (int t);
 
 
@@ -41,10 +36,6 @@ int main (int argc, char * argv[])
 {    
     Rsp_queue_T21 rsp;
     S2_queue_T21 req;
-    // if (argc> 4){
-    //     perror("worker 2 - to many arguments");
-    //     exit(EXIT_FAILURE);
-    // }
 
     mqd_t req_channel   = mq_open(argv[1], O_RDONLY);
     if(req_channel == (mqd_t)-1){
@@ -67,20 +58,18 @@ int main (int argc, char * argv[])
             exit(EXIT_FAILURE);
         }
 
-        if(req.request_id == -1 && req.data == 0){
-            fprintf(stderr,"worker 2 - termination signal");
-            break;
-        }
-
-        rsleep(100);
-        rsp.result = service(req.data);
-        rsp.request_id = req.request_id;
-
-        if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
+        if(req.request_id != -1 && req.data != 0){
+            rsleep(100);
+            rsp.result = service(req.data);
+            rsp.request_id = req.request_id;
+            if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
             perror("worker 2 - sending failed");
             mq_close(rsp_channel);
             mq_close(req_channel);
             exit(EXIT_FAILURE);
+            }
+        }else{
+            break;
         }
     }
    
