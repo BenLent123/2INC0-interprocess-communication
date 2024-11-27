@@ -25,11 +25,26 @@
 #include "messages.h"
 #include "request.h"
 
+char client2dealer[30] = "/c2d";
+char dealer2worker1[30] = "/d2w";
+char dealer2worker2[30] = "/d2w2";
+char worker2dealer[30] = "/w2d";
+
 static void rsleep (int t);
 
 
 int main (int argc, char * argv[])
 {
+  struct mq_attr attr_c2d; //client to dealer ... and so on. c = client, d = dealer, w = worker
+  struct mq_attr attr_d2w;
+  struct mq_attr attr_d2w2;
+  struct mq_attr attr_w2d;
+
+  attr_c2d.mq_maxmsg  = MQ_MAX_MESSAGES;
+  attr_c2d.mq_msgsize = size_req;
+	mqd_t mq_c2d = mq_open (client2dealer_name, O_RDWR | O_EXCL, 0666, attr_c2d);
+	
+	
     // TODO:
     // (see message_queue_test() in interprocess_basic.c)
     //  * open the message queue (whose name is provided in the
