@@ -2,7 +2,9 @@
  * Operating Systems  (2INCO)  Practical Assignment
  * Interprocess Communication
  *
+ * Nitin Singhal (1725963)
  * Daniel Tyukov (1819283)
+ * Ben Lentschig (1824805)  
  *
  * Grading:
  * Your work will be evaluated based on the following criteria:

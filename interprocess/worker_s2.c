@@ -2,8 +2,9 @@
  * Operating Systems  (2INCO)  Practical Assignment
  * Interprocess Communication
  *
- * STUDENT_NAME_1 (STUDENT_NR_1)
- * STUDENT_NAME_2 (STUDENT_NR_2)
+ * Nitin Singhal (1725963)
+ * Daniel Tyukov (1819283)
+ * Ben Lentschig (1824805)  
  *
  * Grading:
  * Your work will be evaluated based on the following criteria:
@@ -42,15 +43,13 @@ int main (int argc, char * argv[])
         perror("worker 2 - request channel opening failed");
         exit(EXIT_FAILURE);
     }
-    printf("worker 2 - request channel opened successfully\n");
 
     mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY);
     if(rsp_channel == (mqd_t)-1){
         perror("worker 2 - response channel opening failed");
         exit(EXIT_FAILURE);
     }
-    printf("worker 2 - response channel opened successfully\n");
-
+    
     while((1)){
         if(mq_receive(req_channel, (char*)&req, sizeof(S2_queue_T21),0) == -1){
             perror("worker 2 - receiving failed");
@@ -58,27 +57,21 @@ int main (int argc, char * argv[])
             mq_close(req_channel);
             exit(EXIT_FAILURE);
         }
-        printf("worker 2 - received request: request_id=%d, data=%d\n", req.request_id, req.data);
 
         if(req.request_id != -1 && req.data != 0){
             rsleep(100);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
-            printf("worker 2 - processed request: request_id=%d, result=%d\n", rsp.request_id, rsp.result);
-
             if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
-                perror("worker 2 - sending failed");
-                mq_close(rsp_channel);
-                mq_close(req_channel);
-                exit(EXIT_FAILURE);
+            perror("worker 2 - sending failed");
+            mq_close(rsp_channel);
+            mq_close(req_channel);
+            exit(EXIT_FAILURE);
             }
-            printf("worker 2 - sent response: request_id=%d, result=%d\n", rsp.request_id, rsp.result);
-        } else {
-            printf("worker 2 - received kill signal\n");
+        } else{
             break;
         }
     }
-   
     mq_close(rsp_channel);
     mq_close(req_channel); 
     exit(1);

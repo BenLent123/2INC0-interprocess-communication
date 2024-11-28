@@ -2,9 +2,10 @@
  * Operating Systems  (2INCO)  Practical Assignment
  * Interprocess Communication
  *
- * Ben Lentschig 1824805
- * Nitin Singhal
- * Daniel Tyukov 1819283
+ * Nitin Singhal (1725963)
+ * Daniel Tyukov (1819283)
+ * Ben Lentschig (1824805)  
+ *
  * Grading:
  * Your work will be evaluated based on the following criteria:
  * - Satisfaction of all the specifications
@@ -42,14 +43,11 @@ int main (int argc, char * argv[])
         perror("worker 1 - request channel opening failed\n");
         exit(EXIT_FAILURE);
     }
-    printf("worker 1 - request channel opened successfully\n");
-
     mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY); 
     if(rsp_channel == (mqd_t)-1){
         perror("worker 1 - response channel opening failed\n");
         exit(EXIT_FAILURE);
     }
-    printf("worker 1 - response channel opened successfully\n");
 
     while((1)){
         if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
@@ -58,27 +56,21 @@ int main (int argc, char * argv[])
             mq_close(req_channel);
             exit(EXIT_FAILURE);
         }
-        printf("worker 1 - received request: request_id=%d, data=%d\n", req.request_id, req.data);
 
         if(req.request_id != -1){
             rsleep(100);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
-            printf("worker 1 - processed request: request_id=%d, result=%d\n", rsp.request_id, rsp.result);
-
             if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
-                perror("worker 1 - sending failed");
-                mq_close(rsp_channel);
-                mq_close(req_channel);
-                exit(EXIT_FAILURE);
+            perror("worker 1 - sending failed");
+            mq_close(rsp_channel);
+            mq_close(req_channel);
+            exit(EXIT_FAILURE);
             }
-            printf("worker 1 - sent response: request_id=%d, result=%d\n", rsp.request_id, rsp.result);
-        } else {
-            printf("worker 1 - received kill signal\n");
+        }else{
             break;
         }
     }
-   
     mq_close(rsp_channel);
     mq_close(req_channel);
     exit(1);
