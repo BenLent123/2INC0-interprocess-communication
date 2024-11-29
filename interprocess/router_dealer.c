@@ -49,9 +49,6 @@ int main (int argc, char * argv[])
         fprintf (stderr, "%s: invalid arguments\n", argv[0]);
     }
 
-    req_queue_T21 req;
-    Rsp_queue_T21 res;
-
     // Set queue parameters and open queues
     struct mq_attr attr_c2d; // client to dealer ... and so on. c = client, d = dealer, w = worker
     struct mq_attr attr_d2w;
@@ -93,10 +90,6 @@ int main (int argc, char * argv[])
     {
         perror("Queue opening failed");
         exit(EXIT_FAILURE);
-    }
-    else
-    {
-        fprintf(stderr,"Queues opened successfully\n");
     }
 
     // Create client
@@ -151,86 +144,96 @@ int main (int argc, char * argv[])
         // Parent continues
     }
 
+	// variables for implementing data flow and control flow
     ssize_t bytes_read_req, bytes_read_rsp;
     int client_status = 1;
     int num_recieved = 0;
     int num_processed = 0;
-
+	int num_dropped = 0;
+	S1_queue_T21 s1_req;
+    S2_queue_T21 s2_req;
+    //req_queue_T21 req;
+    Rsp_queue_T21 res;
+    
+    //circular Buffer for storing client requests when waiting for worker
+    //queues to empty since they are in non-blocking mode
+    int cap_req = 20;
+	req_queue_T21 req[cap_req]; int in = 0; int out = 0; int count_req = 0;
 
     while (1)
     {
-		// Check if client is still running
-		waitpid(clientID, &client_status, WNOHANG);
-
         // Try to receive a message from client
-        bytes_read_req = mq_receive(mq_c2d, (char*) &req, size_req, NULL);
-        if (bytes_read_req >= 0)
+        bytes_read_req = mq_receive(mq_c2d, (char*) &req[in], size_req, NULL);
+        if (bytes_read_req > 0)
         {
 			num_recieved++;
-            if (req.service_id == 1)
+			in=(in+1)%cap_req;
+			count_req++;
+		}
+		if(count_req >0){	
+        if (req[out].service_id == 1)
             {
                 // Send to worker_s1 queue
-                S1_queue_T21 s1_req;
-                s1_req.request_id = req.request_id;
-                s1_req.data = req.data;
-                if (mq_send(mq_d2w, (char*) &s1_req, size_s1, 0) == -1)
-                {
-                    perror("Router-Dealer: mq_send to worker_s1");
-                }
+            s1_req.request_id = req[out].request_id;
+            s1_req.data = req[out].data;
+            if (mq_send(mq_d2w, (char*) &s1_req, size_s1, 0) == -1 )
+				{
+                //perror("Router-Dealer: mq_send to worker_s1");
+            } 
+            else{
+				out=(out+1)%cap_req;
+				count_req--;
+			}
+                if((N_SERV1 == 0)){
+					num_dropped++;
+					count_req--;}
             }
-            else if (req.service_id == 2)
+         else if (req[out].service_id == 2)
             {
                 // Send to worker_s2 queue
-                S2_queue_T21 s2_req;
-                s2_req.request_id = req.request_id;
-                s2_req.data = req.data;
+                s2_req.request_id = req[out].request_id;
+                s2_req.data = req[out].data;
                 if (mq_send(mq_d2w2, (char*) &s2_req, size_s2, 0) == -1)
                 {
-                    perror("Router-Dealer: mq_send to worker_s2");
-                }
+                    //perror("Router-Dealer: mq_send to worker_s2");
+                }else{
+					out=(out+1)%cap_req;
+					count_req--;
+					}
+                if((N_SERV2 == 0)){
+					num_dropped++; }
             }
             else
             {
-                fprintf(stderr, "Router-Dealer: Unknown service_id: %d\n", req.service_id);
+                fprintf(stderr, "Router-Dealer: Unknown service_id: %d\n", req[out].service_id);
             }
         }
-        else if (errno != EAGAIN && errno != EWOULDBLOCK)
-        {
-            perror("Router-Dealer: mq_receive from client");
-        }
-
         // Try to receive a message from workers
-        bytes_read_rsp = mq_receive(mq_w2d, (char*) &res, size_res, NULL);
-        if (bytes_read_rsp >= 0)
-        {
-            // Print the result
-            printf("%d -> %d\n", res.request_id, res.result);
-            num_processed++;
-            //fflush(stdout);
-        }
-        else if (errno != EAGAIN && errno != EWOULDBLOCK)
-        {
-            perror("Router-Dealer: mq_receive from worker");
-        }
-		fprintf(stderr,"Received: %d \n Processed: %d \n",num_recieved,num_processed);
-        if (client_status==0)
+			bytes_read_rsp = mq_receive(mq_w2d, (char*) &res, size_res, NULL);
+			if (bytes_read_rsp >= 0)
+			{
+				// Print the result
+				printf("%d -> %d\n", res.request_id, res.result);
+				num_processed++;
+			}
+			else if (errno != EAGAIN && errno != EWOULDBLOCK)
+			{
+				perror("Router-Dealer: mq_receive from worker");
+			}
+		//Debugging statistics
+		//fprintf(stderr,"Rec: %d, Proc: %d, count: %d, in: %d, out: %d \n",num_recieved,num_processed,count_req,in,out);
+		
+		// Check if client is still running
+		if(client_status==1) {waitpid(clientID, &client_status, WNOHANG);}
+		if (client_status==0)
             {
-            if(num_processed==num_recieved){
+            if((num_processed+num_dropped)==num_recieved){
                     // Break the loop
 				break;
                 }
             }
-            else
-            {
-                // Sleep briefly to prevent busy waiting
-                usleep(1);
-            }
     }
-
-    // Wait for the client process to exit
-    
-    //waitpid(clientID, NULL, 0);
-    
+   
       //Sends requests to workers to terminate themselves since they are no longer useful
 	S1_queue_T21 kill_signal1; 
 	kill_signal1.request_id = -1;
@@ -240,7 +243,7 @@ int main (int argc, char * argv[])
 	kill_signal2.data = 0;
   
 	//Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
-	fprintf(stderr,"sent kill signal to worker 1\n");
+	 fprintf(stderr,"sent kill signal to workers\n");
 	for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); }
 	for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0);}
 
