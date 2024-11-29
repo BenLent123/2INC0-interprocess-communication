@@ -31,10 +31,10 @@
 #include "settings.h"  
 #include "messages.h"
 
-const char * client2dealer_name = "/c2d";
-const char * dealer2worker1_name = "/d2w";
-const char * dealer2worker2_name = "/d2w2";
-const char * worker2dealer_name = "/w2d";
+const char * client2dealer_21 = "/c2d";
+const char * dealer2worker1_21 = "/d2w";
+const char * dealer2worker2_21 = "/d2w2";
+const char * worker2dealer_21 = "/w2d";
 
 // Some variables
 int size_req = sizeof(req_queue_T21);
@@ -78,15 +78,15 @@ int main (int argc, char * argv[])
     attr_w2d.mq_msgsize = size_res;
     attr_w2d.mq_curmsgs = 0;
 
-    mq_unlink(client2dealer_name);
-    mq_unlink(dealer2worker1_name);
-    mq_unlink(dealer2worker2_name);
-    mq_unlink(worker2dealer_name);
+    mq_unlink(client2dealer_21);
+    mq_unlink(dealer2worker1_21);
+    mq_unlink(dealer2worker2_21);
+    mq_unlink(worker2dealer_21);
 
-    mqd_t mq_c2d = mq_open (client2dealer_name, O_RDONLY | O_CREAT | O_NONBLOCK, 0600, &attr_c2d);
-    mqd_t mq_d2w = mq_open (dealer2worker1_name, O_WRONLY | O_CREAT | O_NONBLOCK, 0600, &attr_d2w);
-    mqd_t mq_d2w2 = mq_open (dealer2worker2_name, O_WRONLY | O_CREAT | O_NONBLOCK, 0600, &attr_d2w2);
-    mqd_t mq_w2d = mq_open (worker2dealer_name, O_RDONLY | O_CREAT | O_NONBLOCK, 0600, &attr_w2d);
+    mqd_t mq_c2d = mq_open (client2dealer_21, O_RDONLY | O_CREAT | O_NONBLOCK, 0600, &attr_c2d);
+    mqd_t mq_d2w = mq_open (dealer2worker1_21, O_WRONLY | O_CREAT | O_NONBLOCK, 0600, &attr_d2w);
+    mqd_t mq_d2w2 = mq_open (dealer2worker2_21, O_WRONLY | O_CREAT | O_NONBLOCK, 0600, &attr_d2w2);
+    mqd_t mq_w2d = mq_open (worker2dealer_21, O_RDONLY | O_CREAT | O_NONBLOCK, 0600, &attr_w2d);
 
     // Check if queues were opened correctly
     if ((mq_c2d == (mqd_t) -1) || (mq_d2w == (mqd_t) -1) || (mq_d2w2 == (mqd_t) -1) || (mq_w2d == (mqd_t) -1))
@@ -108,7 +108,7 @@ int main (int argc, char * argv[])
     }
     else if (clientID == 0)
     {
-        execlp ("./client", "client", client2dealer_name, NULL);
+        execlp ("./client", "client", client2dealer_21, NULL);
         perror ("Client execlp() failed");
         exit(EXIT_FAILURE);
     }
@@ -125,7 +125,7 @@ int main (int argc, char * argv[])
         else if (workerID == 0)
         {
             // In child process
-            execlp ("./worker_s1", "worker_s1", dealer2worker1_name, worker2dealer_name, NULL);
+            execlp ("./worker_s1", "worker_s1", dealer2worker1_21, worker2dealer_21, NULL);
             perror ("Worker_s1 execlp() failed");
             exit(EXIT_FAILURE);
         }
@@ -144,7 +144,7 @@ int main (int argc, char * argv[])
         else if (worker2ID == 0)
         {
             // In child process
-            execlp ("./worker_s2", "worker_s2", dealer2worker2_name, worker2dealer_name, NULL);
+            execlp ("./worker_s2", "worker_s2", dealer2worker2_21, worker2dealer_21, NULL);
             perror ("Worker_s2 execlp() failed");
             exit(EXIT_FAILURE);
         }
@@ -163,13 +163,10 @@ int main (int argc, char * argv[])
             client_running = 0;
         }
 
-        bool did_something = false;
-
         // Try to receive a message from client
         bytes_read_req = mq_receive(mq_c2d, (char*) &req, size_req, NULL);
         if (bytes_read_req >= 0)
         {
-            did_something = true;
 
             if (req.service_id == 1)
             {
@@ -207,8 +204,6 @@ int main (int argc, char * argv[])
         bytes_read_rsp = mq_receive(mq_w2d, (char*) &res, size_res, NULL);
         if (bytes_read_rsp >= 0)
         {
-            did_something = true;
-
             // Print the result
             printf("%d -> %d\n", res.request_id, res.result);
             //fflush(stdout);
@@ -218,10 +213,7 @@ int main (int argc, char * argv[])
             perror("Router-Dealer: mq_receive from worker");
         }
 
-        // If nothing happened and client is not running, check queues
-        //if (!did_something)
-        //{
-            if (client_running==0)
+            if (!client_running)
             {
                 // Check if all queues are empty
                 perror("Checking client");
@@ -242,8 +234,7 @@ int main (int argc, char * argv[])
                 // Sleep briefly to prevent busy waiting
                 usleep(1);
             }
-        //}
-    } //end of while loop
+    }
 	fprintf(stdout,"The edge point");
 
 
@@ -270,10 +261,10 @@ int main (int argc, char * argv[])
     mq_close(mq_w2d);
 
     // Unlink the message queues
-    mq_unlink(client2dealer_name);
-    mq_unlink(dealer2worker1_name);
-    mq_unlink(dealer2worker2_name);
-    mq_unlink(worker2dealer_name);
+    mq_unlink(client2dealer_21);
+    mq_unlink(dealer2worker1_21);
+    mq_unlink(dealer2worker2_21);
+    mq_unlink(worker2dealer_21);
 
     return 0;
 }
