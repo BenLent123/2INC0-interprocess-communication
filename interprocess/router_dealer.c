@@ -221,7 +221,7 @@ int main (int argc, char * argv[])
         // If nothing happened and client is not running, check queues
         //if (!did_something)
         //{
-            if (!client_running)
+            if (client_running==0)
             {
                 // Check if all queues are empty
                 perror("Checking client");
