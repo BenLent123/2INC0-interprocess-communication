@@ -2,8 +2,9 @@
  * Operating Systems  (2INCO)  Practical Assignment
  * Interprocess Communication
  *
- * STUDENT_NAME_1 (STUDENT_NR_1)
- * STUDENT_NAME_2 (STUDENT_NR_2)
+ * Nitin Singhal (1725963)
+ * Daniel Tyukov (1819283)
+ * Ben Lentschig (1824805)  
  *
  * Grading:
  * Your work will be evaluated based on the following criteria:
@@ -16,9 +17,6 @@
 
 #ifndef MESSAGES_H
 #define MESSAGES_H
-
-
-
 
 // define the data structures for your messages here
 
