@@ -31,10 +31,10 @@
 #include "settings.h"  
 #include "messages.h"
 
-const char * client2dealer_21 = "/c2d";
-const char * dealer2worker1_21 = "/d2w";
-const char * dealer2worker2_21 = "/d2w2";
-const char * worker2dealer_21 = "/w2d";
+const char * client2dealer_21 = "/client2dealer_21";
+const char * dealer2worker1_21 = "/dealer2worker1_21";
+const char * dealer2worker2_21 = "/dealer2worker2_21";
+const char * worker2dealer_21 = "/worker2dealer_21";
 
 // Some variables
 int size_req = sizeof(req_queue_T21);
@@ -152,22 +152,21 @@ int main (int argc, char * argv[])
     }
 
     ssize_t bytes_read_req, bytes_read_rsp;
-    int client_running = 1;
+    int client_status = 1;
+    int num_recieved = 0;
+    int num_processed = 0;
+
 
     while (1)
     {
-        // Check if client is still running
-        if (waitpid(clientID, NULL, WNOHANG) == -1 )
-        {
-			perror("Client died");
-            client_running = 0;
-        }
+		// Check if client is still running
+		waitpid(clientID, &client_status, WNOHANG);
 
         // Try to receive a message from client
         bytes_read_req = mq_receive(mq_c2d, (char*) &req, size_req, NULL);
         if (bytes_read_req >= 0)
         {
-
+			num_recieved++;
             if (req.service_id == 1)
             {
                 // Send to worker_s1 queue
@@ -206,27 +205,28 @@ int main (int argc, char * argv[])
         {
             // Print the result
             printf("%d -> %d\n", res.request_id, res.result);
+            num_processed++;
             //fflush(stdout);
         }
         else if (errno != EAGAIN && errno != EWOULDBLOCK)
         {
             perror("Router-Dealer: mq_receive from worker");
         }
-
-            if (!client_running)
+		//fprintf(stderr,"Received: %d \n Processed: %d \n",num_recieved,num_processed);
+        if (client_status==0)
             {
                 // Check if all queues are empty
-                perror("Checking client");
-                if(mq_getattr(mq_c2d, &attr_c2d) == -1){perror("failed get_attr");}
-                if(mq_getattr(mq_d2w, &attr_d2w) == -1){perror("failed get_attr");}
-                if(mq_getattr(mq_d2w2, &attr_d2w2) == -1){perror("failed get_attr");}
-                if(mq_getattr(mq_w2d, &attr_w2d) == -1){perror("failed get_attr");}
+                //perror("Checking client");
+                //if(mq_getattr(mq_c2d, &attr_c2d) == -1){perror("failed get_attr");}
+                //if(mq_getattr(mq_d2w, &attr_d2w) == -1){perror("failed get_attr");}
+                //if(mq_getattr(mq_d2w2, &attr_d2w2) == -1){perror("failed get_attr");}
+                //if(mq_getattr(mq_w2d, &attr_w2d) == -1){perror("failed get_attr");}
 
-                if (attr_c2d.mq_curmsgs == 0 && attr_d2w.mq_curmsgs == 0 &&
-                    attr_d2w2.mq_curmsgs == 0 && attr_w2d.mq_curmsgs == 0)
-                {
+                //if (attr_c2d.mq_curmsgs == 0 && attr_d2w.mq_curmsgs == 0 &&
+                //    attr_d2w2.mq_curmsgs == 0 && attr_w2d.mq_curmsgs == 0)
+            if(num_processed==num_recieved){
                     // Break the loop
-                    break;
+				break;
                 }
             }
             else
@@ -235,12 +235,10 @@ int main (int argc, char * argv[])
                 usleep(1);
             }
     }
-	fprintf(stdout,"The edge point");
-
 
     // Wait for the client process to exit
     
-    waitpid(clientID, NULL, 0);
+    //waitpid(clientID, NULL, 0);
     
       //Sends requests to workers to terminate themselves since they are no longer useful
 	S1_queue_T21 kill_signal1; 
@@ -251,8 +249,8 @@ int main (int argc, char * argv[])
 	kill_signal2.data = 0;
   
 	//Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
-	for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); fprintf(stdout,"sent kill signal to worker 1\n");}
-	for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); fprintf(stdout,"sent kill signal to worker 2\n");}
+	for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); fprintf(stderr,"sent kill signal to worker 1\n");}
+	for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); fprintf(stderr,"sent kill signal to worker 2\n");}
 
     // Close the message queues
     mq_close(mq_c2d);
