@@ -29,7 +29,6 @@
 
 #include "messages.h"
 #include "service1.h"
-#include "settings.h"
 
 static void rsleep (int t);
 

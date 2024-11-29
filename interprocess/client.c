@@ -25,7 +25,6 @@
 
 #include "messages.h"
 #include "request.h"
-#include "settings.h"
 
 #include <stdio.h>
 #include <stdlib.h>

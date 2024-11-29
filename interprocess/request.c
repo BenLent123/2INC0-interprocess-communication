@@ -9,7 +9,7 @@
 #include "request.h"
 
 // Array of requests
-const Request requests[] = { {1, 26, 1}, {2, 5, 2}, {3, 10, 2}, {5, 13, 1}, {4, 3, 1} };
+const Request requests[] = {};
 
 // Places the information of the next request in the parameters sent by reference.
 // Returns NO_REQ if there is no request to make.
