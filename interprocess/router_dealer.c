@@ -163,13 +163,10 @@ int main (int argc, char * argv[])
             client_running = 0;
         }
 
-        bool did_something = false;
-
         // Try to receive a message from client
         bytes_read_req = mq_receive(mq_c2d, (char*) &req, size_req, NULL);
         if (bytes_read_req >= 0)
         {
-            did_something = true;
 
             if (req.service_id == 1)
             {
@@ -207,8 +204,6 @@ int main (int argc, char * argv[])
         bytes_read_rsp = mq_receive(mq_w2d, (char*) &res, size_res, NULL);
         if (bytes_read_rsp >= 0)
         {
-            did_something = true;
-
             // Print the result
             printf("%d -> %d\n", res.request_id, res.result);
             //fflush(stdout);
@@ -218,9 +213,6 @@ int main (int argc, char * argv[])
             perror("Router-Dealer: mq_receive from worker");
         }
 
-        // If nothing happened and client is not running, check queues
-        //if (!did_something)
-        //{
             if (!client_running)
             {
                 // Check if all queues are empty
@@ -242,8 +234,7 @@ int main (int argc, char * argv[])
                 // Sleep briefly to prevent busy waiting
                 usleep(1);
             }
-        //}
-    } //end of while loop
+    }
 	fprintf(stdout,"The edge point");
 
 
