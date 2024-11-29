@@ -67,9 +67,7 @@ int main (int argc, char * argv[])
             mq_close(req_channel);
             exit(EXIT_FAILURE);
             }
-            printf("worker 1 sent work\n");
         }else{
-            printf("kill signal received W1 \n");
             break;
         }
     }

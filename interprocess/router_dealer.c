@@ -44,11 +44,6 @@ int size_res = sizeof(Rsp_queue_T21);
 
 int main (int argc, char * argv[])
 {
-    if (argc != 1)
-    {
-        fprintf (stderr, "%s: invalid arguments\n", argv[0]);
-    }
-
     req_queue_T21 req;
     Rsp_queue_T21 res;
 
@@ -93,10 +88,6 @@ int main (int argc, char * argv[])
     {
         perror("Queue opening failed");
         exit(EXIT_FAILURE);
-    }
-    else
-    {
-        fprintf(stderr,"Queues opened successfully\n");
     }
 
     // Create client
@@ -189,10 +180,6 @@ int main (int argc, char * argv[])
                     perror("Router-Dealer: mq_send to worker_s2");
                 }
             }
-            else
-            {
-                fprintf(stderr, "Router-Dealer: Unknown service_id: %d\n", req.service_id);
-            }
         }
         else if (errno != EAGAIN && errno != EWOULDBLOCK)
         {
@@ -204,15 +191,12 @@ int main (int argc, char * argv[])
         if (bytes_read_rsp >= 0)
         {
             // Print the result
-            printf("%d -> %d\n", res.request_id, res.result);
             num_processed++;
-            //fflush(stdout);
         }
         else if (errno != EAGAIN && errno != EWOULDBLOCK)
         {
             perror("Router-Dealer: mq_receive from worker");
         }
-		//fprintf(stderr,"Received: %d \n Processed: %d \n",num_recieved,num_processed);
         if (client_status==0)
             {
                 // Check if all queues are empty
@@ -249,8 +233,8 @@ int main (int argc, char * argv[])
 	kill_signal2.data = 0;
   
 	//Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
-	for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); fprintf(stderr,"sent kill signal to worker 1\n");}
-	for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); fprintf(stderr,"sent kill signal to worker 2\n");}
+	for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0);}
+	for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0);}
 
     // Close the message queues
     mq_close(mq_c2d);

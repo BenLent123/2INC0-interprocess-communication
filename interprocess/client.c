@@ -39,7 +39,6 @@ int main(int argc, char *argv[])
 {
     if (argc != 2)
     {
-        fprintf(stderr, "Usage: %s <Req_queue_name>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -68,7 +67,6 @@ int main(int argc, char *argv[])
     {
         if (ret != NO_ERR)
         {
-            fprintf(stderr, "Client: Error getting next request\n");
             break;
         }
 
