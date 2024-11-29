@@ -31,10 +31,10 @@
 #include "settings.h"  
 #include "messages.h"
 
-const char * client2dealer_name = "/c2d";
-const char * dealer2worker1_name = "/d2w";
-const char * dealer2worker2_name = "/d2w2";
-const char * worker2dealer_name = "/w2d";
+const char * client2dealer_name = "/c2d_21";
+const char * dealer2worker1_name = "/d2w_21";
+const char * dealer2worker2_name = "/d2w2_21";
+const char * worker2dealer_name = "/w2d_21";
 
 // Some variables
 int size_req = sizeof(req_queue_T21);
