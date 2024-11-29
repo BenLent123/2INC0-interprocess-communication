@@ -1,0 +1,4 @@
+#!/bin/bash
+
+rm ska.zip
+zip ska.zip 1725963_Assignment1.pdf messages.h worker_s2.c worker_s1.c client.c router_dealer.c

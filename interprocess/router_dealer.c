@@ -212,18 +212,9 @@ int main (int argc, char * argv[])
         {
             perror("Router-Dealer: mq_receive from worker");
         }
-		//fprintf(stderr,"Received: %d \n Processed: %d \n",num_recieved,num_processed);
+		fprintf(stderr,"Received: %d \n Processed: %d \n",num_recieved,num_processed);
         if (client_status==0)
             {
-                // Check if all queues are empty
-                //perror("Checking client");
-                //if(mq_getattr(mq_c2d, &attr_c2d) == -1){perror("failed get_attr");}
-                //if(mq_getattr(mq_d2w, &attr_d2w) == -1){perror("failed get_attr");}
-                //if(mq_getattr(mq_d2w2, &attr_d2w2) == -1){perror("failed get_attr");}
-                //if(mq_getattr(mq_w2d, &attr_w2d) == -1){perror("failed get_attr");}
-
-                //if (attr_c2d.mq_curmsgs == 0 && attr_d2w.mq_curmsgs == 0 &&
-                //    attr_d2w2.mq_curmsgs == 0 && attr_w2d.mq_curmsgs == 0)
             if(num_processed==num_recieved){
                     // Break the loop
 				break;
@@ -249,8 +240,9 @@ int main (int argc, char * argv[])
 	kill_signal2.data = 0;
   
 	//Since every worker will terminate upon processing 1 kill_signal, sending N kill signals should terminate N workers
-	for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); fprintf(stderr,"sent kill signal to worker 1\n");}
-	for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0); fprintf(stderr,"sent kill signal to worker 2\n");}
+	fprintf(stderr,"sent kill signal to worker 1\n");
+	for(int i =0; i<N_SERV1; i++){mq_send(mq_d2w, (char*) &kill_signal1, size_s1, 0); }
+	for(int i =0; i<N_SERV2; i++){mq_send(mq_d2w2, (char*) &kill_signal2, size_s2, 0);}
 
     // Close the message queues
     mq_close(mq_c2d);
@@ -263,6 +255,10 @@ int main (int argc, char * argv[])
     mq_unlink(dealer2worker1_21);
     mq_unlink(dealer2worker2_21);
     mq_unlink(worker2dealer_21);
+    
+    //Remove zombies
+    int dump;
+    for(int i =0; i< N_SERV1 + N_SERV2; i++){wait(&dump);}
 
     return 0;
 }

@@ -23,9 +23,6 @@
 #include <mqueue.h>     // for mq-stuff
 #include <time.h>       // for time()
 
-#include "messages.h"
-#include "request.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>      // for perror()
@@ -33,7 +30,9 @@
 
 #include "messages.h"
 #include "request.h"
-#include "settings.h"
+//#include "settings.h"
+
+
 
 int main(int argc, char *argv[])
 {
@@ -47,11 +46,6 @@ int main(int argc, char *argv[])
     struct mq_attr attr_c2d;
     req_queue_T21 req;
     int size_req = sizeof(req_queue_T21);
-
-    attr_c2d.mq_flags = 0;
-    attr_c2d.mq_maxmsg = MQ_MAX_MESSAGES;
-    attr_c2d.mq_msgsize = size_req;
-    attr_c2d.mq_curmsgs = 0;
 
     mq_c2d = mq_open(argv[1], O_WRONLY);
 

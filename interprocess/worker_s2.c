@@ -58,7 +58,7 @@ int main (int argc, char * argv[])
         }
 
         if(req.request_id != -1 && req.data != 0){
-            rsleep(100);
+            rsleep(10000);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
             if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
