@@ -70,6 +70,7 @@ int main (int argc, char * argv[])
             }
             printf("worker 2 sent work\n");
         } else{
+            printf("kill signal received W2 \n");
             break;
         }
     }
