@@ -48,9 +48,12 @@ int main (int argc, char * argv[])
         perror("worker 1 - response channel opening failed");
         exit(EXIT_FAILURE);
     }else{perror("worker 1 - response channel opening succeeded");}
-
+	int mq_recieved_w;
+	int mq_sent_w;
+	
     while((1)){
-        if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
+		mq_recieved_w = mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0);
+        if(mq_recieved_w == -1){
             perror("worker 1 - receiving failed\n");
         }
 
