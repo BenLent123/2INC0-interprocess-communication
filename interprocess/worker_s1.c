@@ -52,9 +52,6 @@ int main (int argc, char * argv[])
     while((1)){
         if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
             perror("worker 1 - receiving failed\n");
-            mq_close(rsp_channel);
-            mq_close(req_channel);
-            exit(EXIT_FAILURE);
         }
 
         if(req.request_id != -1){
@@ -63,13 +60,10 @@ int main (int argc, char * argv[])
             rsp.request_id = req.request_id;
             if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
             perror("worker 1 - sending failed");
-            mq_close(rsp_channel);
-            mq_close(req_channel);
-            exit(EXIT_FAILURE);
             }
-            printf("worker 1 sent work\n");
+            fprintf(stderr,"worker 1 sent work\n");
         }else{
-            printf("kill signal received W1 \n");
+            fprintf(stderr,"kill signal received W1 \n");
             break;
         }
     }

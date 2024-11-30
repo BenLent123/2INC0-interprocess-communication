@@ -43,7 +43,6 @@ int main(int argc, char *argv[])
     }
 
     mqd_t mq_c2d;
-    struct mq_attr attr_c2d;
     req_queue_T21 req;
     int size_req = sizeof(req_queue_T21);
 
@@ -76,7 +75,7 @@ int main(int argc, char *argv[])
             break;
         }
     }
-
+	usleep(1000);
     mq_close(mq_c2d);
 
     return 0;
