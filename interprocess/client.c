@@ -30,9 +30,6 @@
 
 #include "messages.h"
 #include "request.h"
-//#include "settings.h"
-
-
 
 int main(int argc, char *argv[])
 {

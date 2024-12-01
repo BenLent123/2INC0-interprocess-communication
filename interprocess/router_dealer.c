@@ -216,7 +216,7 @@ int main (int argc, char * argv[])
                 mq_sent_d = mq_send(mq_d2w2, (char*) &s2_req, size_s2, 0);
                 if (mq_sent_d == -1)
                 {
-                    //perror("Router-Dealer: mq_send to worker_s2");
+                    // perror("Router-Dealer: mq_send to worker_s2");
                 }
                 
                 else

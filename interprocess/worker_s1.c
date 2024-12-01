@@ -92,6 +92,7 @@ int main (int argc, char * argv[])
         
          
     }
+    // close all channels
     mq_close(rsp_channel);
     mq_close(req_channel);
     return 0;    
