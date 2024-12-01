@@ -213,7 +213,8 @@ int main (int argc, char * argv[])
                 s2_req.request_id = req[out].request_id;
                 s2_req.data = req[out].data;
                 
-                if (mq_send(mq_d2w2, (char*) &s2_req, size_s2, 0) == -1)
+                mq_sent_d = mq_send(mq_d2w2, (char*) &s2_req, size_s2, 0);
+                if (mq_sent_d == -1)
                 {
                     //perror("Router-Dealer: mq_send to worker_s2");
                 }
