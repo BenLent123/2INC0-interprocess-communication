@@ -155,11 +155,12 @@ int main (int argc, char * argv[])
 	S1_queue_T21 s1_req;
     S2_queue_T21 s2_req;
     Rsp_queue_T21 res;
+    int mq_sent_d;
     
     //Since worker queues are in non-blocking mode, the router can read
     //many client requests while waiting for the workers to finish
     //processing results. Client requests are stored in a circular loop
-    int cap_req = 15;
+    int cap_req = 10;
 	req_queue_T21 req[cap_req]; int in = 0; int out = 0; int count_req = 0;
 
 	//This while loop implements the data routing functionality of 
@@ -187,7 +188,8 @@ int main (int argc, char * argv[])
 				s1_req.request_id = req[out].request_id;
 				s1_req.data = req[out].data;
 				
-				if (mq_send(mq_d2w, (char*) &s1_req, size_s1, 0) == -1 )
+				mq_sent_d = mq_send(mq_d2w, (char*) &s1_req, size_s1, 0);
+                if (mq_sent_d == -1 )
 				{
 					//perror("Router-Dealer: mq_send to worker_s1");
 				} 
@@ -211,7 +213,8 @@ int main (int argc, char * argv[])
                 s2_req.request_id = req[out].request_id;
                 s2_req.data = req[out].data;
                 
-                if (mq_send(mq_d2w2, (char*) &s2_req, size_s2, 0) == -1)
+                mq_sent_d = mq_send(mq_d2w2, (char*) &s2_req, size_s2, 0);
+                if (mq_sent_d == -1)
                 {
                     // perror("Router-Dealer: mq_send to worker_s2");
                 }
@@ -257,12 +260,9 @@ int main (int argc, char * argv[])
 			waitpid(clientID, &client_status, WNOHANG);
 		}
 			
-		if (client_status==0)
+		else if ((num_processed+num_dropped)==num_recieved)
         {
-            if((num_processed+num_dropped)==num_recieved)
-            {
-				break;
-            }
+			break;
         }
     }
    

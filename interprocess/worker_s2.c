@@ -28,20 +28,21 @@
 #include <time.h>       // for time()
 
 #include "messages.h"
-#include "service2.h"
+#include "service1.h"
 
 static void rsleep (int t);
 
 int main (int argc, char * argv[])
 {
-   Rsp_queue_T21 rsp;
-   S2_queue_T21 req;
-   // check amount of arguments
+	Rsp_queue_T21 rsp;
+	S2_queue_T21 req;
+	
+	// check amount of arguments
     if (argc < 3) {
-        perror("worker 1 - argument amount failure");
+        perror("worker 2 - argument amount failure");
         exit(EXIT_FAILURE);
     }
-
+	
     // Open request channel (router to worker) (read only)
     mqd_t req_channel   = mq_open(argv[1], O_RDONLY); 
     if(req_channel == (mqd_t)-1){
@@ -55,26 +56,41 @@ int main (int argc, char * argv[])
         perror("worker 2 - response channel opening failed");
         exit(EXIT_FAILURE);
     }
-
-    // while loop --> work done till termination signal
+    
+	int mq_recieved_w;
+	int mq_sent_w = 0;
+	
     while((1)){
-        // check if something is recieved
-        if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
+		//The first if is so that an attempt to receive is only made if 
+		//something was sent previous cycle, or this is the initial loop
+		//This is to prevent jobs from being overwritten
+		if(mq_sent_w==0) {
+			mq_recieved_w = mq_receive(req_channel, (char*)&req, sizeof(S2_queue_T21),0);
+		}
+		
+        if(mq_recieved_w == -1){
             perror("worker 2 - receiving failed\n");
+            mq_sent_w = 0; //Try recieving again in next loop
         }
-        // do service 2 if termination is not called
-        if(req.request_id != -1){
+        
+        else if(req.request_id == -1){
+            fprintf(stderr,"kill signal received W2 \n");
+            break;
+        } else 
+			{
             rsleep(10000);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
-            if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
-            perror("worker 2 - sending failed");
-            }
-            
-        }else{
-            // exit the while loop
-            break;
-        }
+            mq_sent_w = mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0);
+            if(mq_sent_w == -1){
+				perror("worker 2 - sending failed");
+			} else 
+				{
+					fprintf(stderr,"worker 2 sent work\n");
+				}
+			}
+        
+         
     }
     // close all channels
     mq_close(rsp_channel);

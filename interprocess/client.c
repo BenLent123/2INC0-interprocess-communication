@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
         if (mq_send(mq_c2d, (char *)&req, size_req, 0) == -1)
         {
             perror("Client: mq_send");
-            break;
+            //break;
         }
     }
 	usleep(1000);
