@@ -188,8 +188,8 @@ int main (int argc, char * argv[])
 				s1_req.request_id = req[out].request_id;
 				s1_req.data = req[out].data;
 				
-				mq_sent_d = mq_send(mq_d2w, (char*) &s1_req);
-                if (mq_sent_d != -1 )
+				mq_sent_d = mq_send(mq_d2w, (char*) &s1_req, size_s1, 0);
+                if (mq_sent_d == -1 )
 				{
 					//perror("Router-Dealer: mq_send to worker_s1");
 				} 

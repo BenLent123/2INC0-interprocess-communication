@@ -49,22 +49,28 @@ int main (int argc, char * argv[])
         exit(EXIT_FAILURE);
     }else{perror("worker 2 - response channel opening succeeded");}
 
-    while((1)){
-        if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
-            perror("worker 2 - receiving failed\n");
-        }
+	int mq_recieved_w;
+	int mq_sent_w = 0;
 
-        if(req.request_id != -1){
+    while((1)){
+		if(mq_sent_w==0) mq_recieved_w = mq_receive(req_channel, (char*)&req, sizeof(S2_queue_T21),0);
+        if(mq_recieved_w == -1){
+            perror("worker 2 - receiving failed\n");
+            mq_sent_w = 0; //Try recieving again in next loop
+        }
+        if(req.request_id == -1){
+            fprintf(stderr,"kill signal received W2 \n");
+            break;
+        }
+        else {
             rsleep(10000);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
-            if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
+            mq_sent_w = mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0);
+            if(mq_sent_w == -1){
             perror("worker 2 - sending failed");
             }
-            fprintf(stderr,"worker 2 sent work\n");
-        }else{
-            fprintf(stderr,"kill signal received W2 \n");
-            break;
+            else {fprintf(stderr,"worker 2 sent work\n");}
         }
     }
     mq_close(rsp_channel);

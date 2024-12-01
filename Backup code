@@ -265,3 +265,122 @@ static void rsleep (int t)
     usleep (random() % t);
 }
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+%The execution point of the router, workers and clients are tracked with $deal[n]$, $work[n]$ and $client[n]$, where the value of the variables is the number of the atomic statement in the task that was last executed.
+    %%%%%FUCK ME%%%%%%%%%%%%%%
+    
+    
+    Each variable on the \textbf{start} of the n-th step is notated as $variable\_name[n]$. The number of steps have been counted assuming livelock conditions hold. These conditions cause many instructions in if statements to be skipped.\\
+
+    In the router, a livelock implies that through a whole loop, no progress was made, thus the read client section, send data to workers section, the read response queue sections all failed and the loop won't be exited. Thus, after n steps of the router (giving a whole number of loops), the following conditions for livelock are yielded
+
+    \begin{equation}
+        \begin{split} \label{cond:router}
+            ((count\_req[n+1] \geq cap\_req[n+1]) \lor (bytes\_read\_req[n+2] \leq 0) ) \land \\
+            ((count\_req[n+3] \leq 0) \lor (mq\_sent\_d[n+7] = -1) )  \land \\
+            (bytes\_read\_rsp[n+9] \leq 0) \land \\
+            ((client\_status[n+10] = 1) \lor \lnot(num\_processed[n+11] = num\_recieved[n+11]))
+        \end{split}
+    \end{equation}
+
+    Note, $(bytes\_read\_req[n+2] \leq 0) \Rightarrow (q\_req[n+2] = 0)$ and $(bytes\_read\_rsp[n+9] \leq 0) \Rightarrow (q\_rsp[n+9] = 0)$ \\
+
+    In the worker, there will be no progress if no job is popped from the queue, the worker does not terminate (request\_id = -1 is the termination signal) and nothing is sent. Thus, after k steps (forming a whole number of loops)
+
+    \begin{equation}
+        \begin{split}\label{cond:worker}
+            (
+            (\lnot(mq\_sent[k+1] = 0) \land \lnot(mq\_recieved\_w[k+2] = -1) \land \lnot(mq\_sent[k+8] = 0)) \lor (mq\_recieved\_w[k+3] = -1)
+            ) \land \\
+            \lnot(req.request\_id[k+3] = -1) 
+        \end{split}
+    \end{equation}
+
+    Note, $(mq\_sent[k+1] = 0) \Rightarrow (q\_rsp[k+1] = full)$ and $(mq\_recieved\_w[k+3] = -1) \Rightarrow (q\_work[k+3] = 0)$ \\
+
+     Live locking implies that the router and worker will execute an infinite number of loops while the client is terminated. We can already see $(count\_req[n+1] \geq cap\_req[n+1]) \land (count\_req[n+3] \leq 0)$ is impossible. The only statement that modifies the count between steps n+1 and n+3 is statement 6, which is forbidden under livelock as it could only happen if job requests were read. \\
+
+     We can simplify $(A \lor B) \land (C \lor D)$ to $(A \land C) \lor (A \land D) \lor (B \land C) \lor (B \land D)$. $A \land C$ is disallowed, so 
+
+     We pick to begin analyzing the execution of the program when the dealer has completed n steps, the worker k steps, such that n steps form a whole number of router loops, while k is arbitrary. The router executes now \\
+
+    \begin{lstlisting}
+        if(count_req<cap_req)
+    \end{lstlisting}
+
+    If this succeeds, then mq\_receive() is performed. Due to livelock, the receive must fail. If the statement fails, then the next 
+
+    \begin{lstlisting}
+        if(count_req>0)
+    \end{lstlisting}
+    
+    must succeed. This is because
+    
+
+    
+    and succeed. In the former case, no matter how many loops of the client are executed, 
+    \begin{lstlisting}
+        bytes_read_req = mq_receive(mq_c2d, (char *) &req[in])
+    \end{lstlisting}
+
+    will succeed since the client 2 router queue is full (necessary to block the client) and the client can't unrequest jobs. Then condition \ref{cond:router}is broken and progress is made. In the latter case, we execute
+    \begin{lstlisting}
+        mq_sent_d = mq_send(mq_d2w, (char*) &s1_req);
+    \end{lstlisting}
+
+    $mq\_recieved\_w[k] = -1$ from condition \ref{cond:worker} implies that the worker queue is empty, thus mq\_send() in the router succeeds, yeilding progress. Any number of concurrent executions of the client or worker won't fill the worker queue. \\
+
+    
+\end{proof}
+%The logic is actually a little hard. I'm thinking how to approach this
+%Yeah I need to show the worker code and client code to make my argument
+
+
+%    If the worker were not locked, then at some point less than k loops later, it will either pop a task from the worker queue, or push a result onto the response queue. Then, either $\lnot(mq\_sent[n+k] = -1)$ because a slot on the worker queue opened, or $\lnot(bytes\_read\_rsp[n] \leq 0)$ because a response was published. In the latter case, 
+
+ %   If the client is not livelocked, then at some point k loops later, it will send either a job request or terminate. Then either $(client\_status[n+k] != 1)$, or $(bytes\_read\_req[n] > 0)$.
+    
+    
+
+%There are 4 resources which can theoretically be accessed in a way as to cause deadlock. The client to dealer queue, the dealer to worker queue (only 1 is considered), the response queue and the buffer. There is also the theoretical possibility of a livelock where the router loops through the code without making progress, forever. We can model the problem with a resource allocation graph. \\
+
+%Each queue is modeled with 2 semaphores (to enforce the invariants of a minimum item count and maximum capacity) and a mutex. Semaphore $A_i$ enforces a maximum count on the $i$-th data storage, while semaphore $B_i$ enforces a minimum (0 for all of them). The client to dealer queue is data store 0, queue S1 is data store 1, S2 is data store 2, the response queue is data store 3. \\
+
+%Since the queues are opened in non-blocking mode, all calls to the queue model semaphores and mutexes are non-blocking. \\
+
+
+
+
+
+%The tasks that compete for them are processes. There are 4 queues and 1 buffer (local to the router_dealer). The buffer is not shared, but is still modeled \\
+
+%Each queue and buffer is modeled as 3 resources, i.e. 2 sempahores and 1 mutex. The semaphores enforce invariants on the number of objects in the queue/buffer (a min and a max), while the mutex prevent race conditions. The requests to these resources can be blocking or non-blocking (lock() and wait() or trylock() and trywait()). \\
+
+
+
+
+%Tasks pushing to a queue/buffer use wait() (or trywait()), while tasks poping from 
+
+
