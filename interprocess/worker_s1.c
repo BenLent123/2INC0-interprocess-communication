@@ -29,7 +29,6 @@
 
 #include "messages.h"
 #include "service1.h"
-#include "settings.h"
 
 static void rsleep (int t);
 
@@ -37,43 +36,53 @@ int main (int argc, char * argv[])
 {
    Rsp_queue_T21 rsp;
    S1_queue_T21 req;
+    // check amount of arguments
+    if (argc < 3) {
+        perror("worker 1 - argument amount failure");
+        exit(EXIT_FAILURE);
+    }
 
+    // Open request channel (router to worker) (read only)
     mqd_t req_channel   = mq_open(argv[1], O_RDONLY); 
     if(req_channel == (mqd_t)-1){
-        perror("worker 1 - request channel opening failed\n");
+        perror("worker 1 - request channel opening failed");
         exit(EXIT_FAILURE);
     }
+    
+    // Open response channel (worker to router) (write only)
     mqd_t rsp_channel   = mq_open(argv[2], O_WRONLY); 
     if(rsp_channel == (mqd_t)-1){
-        perror("worker 1 - response channel opening failed\n");
+        perror("worker 1 - response channel opening failed");
         exit(EXIT_FAILURE);
     }
 
-    while((1)){
-        if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
-            perror("worker 1 - receiving failed\n");
-            mq_close(rsp_channel);
-            mq_close(req_channel);
-            exit(EXIT_FAILURE);
-        }
+    int sent_state = 0;
 
+    // while loop --> work done till termination signal
+    while((1)){
+        // check if something is recieved
+        if(sent_state == 0 && mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
+            perror("worker 1 - receiving failed\n");
+            sent_state = 0;
+            continue;
+        }
+        // do service 1 if termination is not called
         if(req.request_id != -1){
-            rsleep(100);
+            rsleep(10000);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
             if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
             perror("worker 1 - sending failed");
-            mq_close(rsp_channel);
-            mq_close(req_channel);
-            exit(EXIT_FAILURE);
             }
+            sent_state = 1;
         }else{
+            // exit the while loop
             break;
         }
     }
+    // close all channels
     mq_close(rsp_channel);
     mq_close(req_channel);
-    exit(1);
     return 0;    
 }
 
