@@ -56,7 +56,6 @@ int main (int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
 
-    int reicieve_state;
     int sent_state = 0;
 
     // while loop --> work done till termination signal
