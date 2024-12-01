@@ -56,11 +56,16 @@ int main (int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
 
+    int reicieve_state;
+    int sent_state = 0;
+
     // while loop --> work done till termination signal
     while((1)){
         // check if something is recieved
-        if(mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
+        if(sent_state == 0 && mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
             perror("worker 1 - receiving failed\n");
+            sent_state = 0;
+            continue;
         }
         // do service 1 if termination is not called
         if(req.request_id != -1){
@@ -70,7 +75,7 @@ int main (int argc, char * argv[])
             if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
             perror("worker 1 - sending failed");
             }
-            
+            sent_state = 1;
         }else{
             // exit the while loop
             break;
