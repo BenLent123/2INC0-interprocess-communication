@@ -73,7 +73,7 @@ int main (int argc, char * argv[])
             mq_sent_w = 0; //Try recieving again in next loop
         }
         
-        if(req.request_id == -1){
+        else if(req.request_id == -1){
             fprintf(stderr,"kill signal received W2 \n");
             break;
         } else 
