@@ -28,7 +28,7 @@
 #include <time.h>       // for time()
 
 #include "messages.h"
-#include "service1.h"
+#include "service2.h"
 
 static void rsleep (int t);
 
