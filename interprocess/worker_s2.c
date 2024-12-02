@@ -67,8 +67,7 @@ int main (int argc, char * argv[])
 		if(mq_sent==0) {
 			mq_recieved = mq_receive(req_channel, (char*)&req, sizeof(S2_queue_T21),0);
 		}
-		
-        if(mq_recieved == -1){
+        else if(mq_recieved == -1){
             perror("worker 2 - receiving failed\n");
             mq_sent = 0; 
             //Try recieving again in next loop

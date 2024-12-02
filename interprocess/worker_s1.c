@@ -67,8 +67,7 @@ int main (int argc, char * argv[])
 		if(mq_sent==0) {
 			mq_received = mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0);
 		}
-		
-        if(mq_received == -1){
+        else if(mq_received == -1){
             perror("worker 1 - receiving failed\n");
             mq_sent = 0; 
             //Try recieving again in next loop
@@ -87,6 +86,7 @@ int main (int argc, char * argv[])
             break;
 			}  
     }
+
     // close all channels
     mq_close(rsp_channel);
     mq_close(req_channel);
