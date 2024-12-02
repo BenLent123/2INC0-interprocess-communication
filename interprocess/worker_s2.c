@@ -57,40 +57,35 @@ int main (int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
     
-	int mq_recieved_w;
-	int mq_sent_w = 0;
+	int mq_received = 0;
+	int mq_sent = 0;
 	
     while((1)){
 		//The first if is so that an attempt to receive is only made if 
 		//something was sent previous cycle, or this is the initial loop
 		//This is to prevent jobs from being overwritten
-		if(mq_sent_w==0) {
-			mq_recieved_w = mq_receive(req_channel, (char*)&req, sizeof(S2_queue_T21),0);
+		if(mq_sent==0) {
+			mq_recieved = mq_receive(req_channel, (char*)&req, sizeof(S2_queue_T21),0);
 		}
 		
-        if(mq_recieved_w == -1){
+        if(mq_recieved == -1){
             perror("worker 2 - receiving failed\n");
-            mq_sent_w = 0; //Try recieving again in next loop
+            mq_sent = 0; 
+            //Try recieving again in next loop
         }
         
-        else if(req.request_id == -1){
-            fprintf(stderr,"kill signal received W2 \n");
-            break;
-        } else 
-			{
+        if(req.request_id != -1){
             rsleep(10000);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
-            mq_sent_w = mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0);
-            if(mq_sent_w == -1){
-				perror("worker 2 - sending failed");
-			} else 
-				{
-					fprintf(stderr,"worker 2 sent work\n");
-				}
+            mq_sent = mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0);
+            if(mq_sent == -1){
+			    perror("worker 2 - sending failed");
 			}
-        
-         
+        }else{
+             //break out of while loop
+            break;
+			}  
     }
     // close all channels
     mq_close(rsp_channel);

@@ -57,30 +57,35 @@ int main (int argc, char * argv[])
         exit(EXIT_FAILURE);
     }
     
-    int recieve_state = 0;
+    int mq_received = 0;
+    int mq_sent = 0;
 
-    // while loop --> work done till termination signal
     while((1)){
-        // check if something is recieved
-        // check has recieve_state to have loop not recieve multiple jobs
-        if(recieve_state == 0 && mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0) == -1){
+		//The first if is so that an attempt to receive is only made if 
+		//something was sent previous cycle, or this is the initial loop
+		//This is to prevent jobs from being overwritten
+		if(mq_sent==0) {
+			mq_received = mq_receive(req_channel, (char*)&req, sizeof(S1_queue_T21),0);
+		}
+		
+        if(mq_received == -1){
             perror("worker 1 - receiving failed\n");
-            recieve_state = 0;
-            continue;
+            mq_sent = 0; 
+            //Try recieving again in next loop
         }
-        recieve_state = 1;
-        // do service 1 if termination is not called
+        
         if(req.request_id != -1){
             rsleep(10000);
             rsp.result = service(req.data);
             rsp.request_id = req.request_id;
-            if(mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0) == -1){
-            perror("worker 1 - sending failed");
-            }
+            mq_sent = mq_send(rsp_channel, (char*)&rsp, sizeof(Rsp_queue_T21),0);
+            if(mq_sent == -1){
+			    perror("worker 1 - sending failed");
+			}
         }else{
-            // exit the while loop
+             //break out of while loop
             break;
-        }
+			}  
     }
     // close all channels
     mq_close(rsp_channel);
