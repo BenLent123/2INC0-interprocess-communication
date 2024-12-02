@@ -82,12 +82,13 @@ int main (int argc, char * argv[])
             break;
         }
     }
-    }
     // close all channels
     mq_close(rsp_channel);
     mq_close(req_channel);
-    return 0;    
+    return 0;  
 }
+      
+
 
 static void rsleep (int t)
 {
