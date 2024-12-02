@@ -70,6 +70,7 @@ int main (int argc, char * argv[])
         else if(mq_recieved == -1){
             perror("worker 2 - receiving failed\n");
             mq_sent = 0; 
+	    continue;
             //Try recieving again in next loop
         }
         
