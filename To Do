@@ -1,7 +1,0 @@
-if (argc < 3) {
-    fprintf(stderr, "Usage: %s <request_queue_name> <response_queue_name>\n", argv[0]);
-    exit(EXIT_FAILURE);
-}
-
-
-added continue; statment for recieve thing in worker ! remove if needed
